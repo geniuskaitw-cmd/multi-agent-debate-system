@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>多智能體辯論與決策系統</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #0B0F1A;
+      --bg-card: #131825;
+      --bg-card-alt: #1A2035;
+      --accent-emerald: #10B981;
+      --accent-amber: #F59E0B;
+      --accent-violet: #8B5CF6;
+      --accent-cyan: #06B6D4;
+      --text-primary: #E8ECF4;
+      --text-secondary: #8B95A8;
+      --text-muted: #505A6E;
+      --border-color: #1E2A3A;
+      --border-glow: rgba(16, 185, 129, 0.3);
+      --error-red: #EF4444;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans TC', sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 600px 400px at 20% 10%, rgba(16,185,129,0.04) 0%, transparent 70%),
+        radial-gradient(ellipse 500px 300px at 80% 80%, rgba(139,92,246,0.03) 0%, transparent 70%);
+    }
+
+    .container { max-width: 1280px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* Header */
+    .app-header { text-align: center; margin-bottom: 2.5rem; }
+    .app-header h1 {
+      font-size: 1.6rem; font-weight: 700; color: var(--text-primary);
+      letter-spacing: -0.02em; margin-bottom: 0.4rem;
+    }
+    .app-header h1 .accent { color: var(--accent-emerald); }
+    .app-header p { color: var(--text-secondary); font-size: 0.9rem; }
+
+    /* Card */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card-title {
+      font-size: 0.85rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-muted);
+      margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .card-title::before {
+      content: ''; display: inline-block; width: 3px; height: 14px;
+      background: var(--accent-emerald); border-radius: 2px;
+    }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header class="app-header" role="banner">
+      <h1>Multi-Agent <span class="accent">Debate</span> System</h1>
+      <p>輸入您的想法，四個 AI 智能體將進行結構化辯論，為您產出最佳方案</p>
+    </header>
+
+    <!-- Input -->
+    <section class="card input-section" aria-label="辯論輸入區域">
+      <h2 class="card-title">INPUT</h2>
+      <label for="user-input" class="sr-only">請輸入您的原始想法或問題</label>
+      <textarea id="user-input" placeholder="請輸入您的原始想法或問題，例如：「我們應該在東南亞市場推出新的 SaaS 產品嗎？」" rows="5"></textarea>
+      <div class="input-actions">
+        <span id="input-hint" class="char-count" aria-live="polite">0 字</span>
+        <button id="btn-start" class="btn-primary" type="button" aria-label="啟動辯論">
+          <span class="spinner" aria-hidden="true"></span>
+          <span class="btn-text">LAUNCH DEBATE</span>
+          <span class="btn-loading-text">PROCESSING...</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Pipeline -->
+    <section id="pipeline-section" class="card" aria-label="辯論流程" style="display:none;">
+      <h2 class="card-title">PIPELINE</h2>
+      <div id="pipeline" class="pipeline"></div>
+    </section>
+
+    <!-- Connection Banner -->
+    <div id="connection-banner" class="connection-banner" role="alert" aria-live="assertive" style="display:none;">
+      <span class="connection-msg">CONNECTION LOST</span>
+      <button id="btn-reconnect" class="btn-reconnect" type="button">RECONNECT</button>
+    </div>
+
+    <!-- User Input Display -->
+    <section id="user-input-display" class="card" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+        <h2 class="card-title" style="margin-bottom:0;">ORIGINAL INPUT</h2>
+        <button class="btn-icon" onclick="copyText('user-input-text')" title="複製" aria-label="複製輸入內容">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        </button>
+      </div>
+      <div id="user-input-text" class="content-block"></div>
+    </section>
+
+    <!-- Proposals -->
+    <section id="proposals-section" class="card" aria-label="方案對比" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <h2 class="card-title" style="margin-bottom:0;">PROPOSALS</h2>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="btn-icon" id="btn-toggle-view" onclick="toggleView()" title="切換檢視" aria-label="切換檢視模式">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          </button>
+          <button class="btn-icon" onclick="exportAll('txt')" title="匯出 TXT" aria-label="匯出文字檔">TXT</button>
+          <button class="btn-icon" onclick="exportAll('html')" title="匯出 HTML (可轉PDF)" aria-label="匯出 HTML">PDF</button>
+        </div>
+      </div>
+      <div id="proposals-content" class="proposals-grid" role="list"></div>
+    </section>
+
+    <!-- Scoring -->
+    <section id="scoring-section" class="card" aria-label="評分" style="display:none;">
+      <h2 class="card-title">EVALUATION</h2>
+      <div id="rationale-box" class="rationale-box" style="display:none;"></div>
+      <div id="scoring-content" class="scoring-layout">
+        <div class="radar-chart-wrapper">
+          <canvas id="radar-chart" aria-label="雷達圖" role="img"></canvas>
+        </div>
+        <div class="score-table-wrapper">
+          <table id="score-table" class="score-table" aria-label="評分表">
+            <thead></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+<style>
+    /* Input */
+    .input-section textarea {
+      width: 100%; min-height: 120px; padding: 1rem;
+      background: var(--bg-primary); border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm); color: var(--text-primary);
+      font-family: inherit; font-size: 0.9rem; line-height: 1.6;
+      resize: vertical; transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .input-section textarea:focus {
+      outline: none; border-color: var(--accent-emerald);
+      box-shadow: 0 0 0 3px rgba(16,185,129,0.1);
+    }
+    .input-section textarea:disabled { opacity: 0.4; cursor: not-allowed; }
+    .input-section textarea::placeholder { color: var(--text-muted); }
+    .input-actions { display: flex; justify-content: flex-end; align-items: center; margin-top: 0.75rem; gap: 1rem; }
+    .char-count { color: var(--text-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.65rem 1.5rem; background: var(--accent-emerald); color: #fff;
+      border: none; border-radius: var(--radius-sm); font-size: 0.8rem;
+      font-weight: 700; letter-spacing: 0.06em; cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .btn-primary:hover:not(:disabled) { background: #059669; box-shadow: 0 0 20px rgba(16,185,129,0.2); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary .spinner {
+      display: none; width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+    }
+    .btn-primary.loading .spinner { display: inline-block; }
+    .btn-primary.loading .btn-text { display: none; }
+    .btn-primary.loading .btn-loading-text { display: inline; }
+    .btn-primary .btn-loading-text { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .btn-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 0.35rem 0.6rem; background: transparent;
+      border: 1px solid var(--border-color); border-radius: 6px;
+      color: var(--text-muted); font-size: 0.7rem; font-weight: 600;
+      letter-spacing: 0.04em; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-icon:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+    /* Pipeline - horizontal flow */
+    .pipeline {
+      display: flex; align-items: center; gap: 0; overflow-x: auto;
+      padding: 1rem 0;
+    }
+    .pipeline-node {
+      flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
+      gap: 0.5rem; min-width: 120px; position: relative;
+    }
+    .pipeline-circle {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 2px solid var(--border-color); background: var(--bg-primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
+      transition: all 0.4s ease; position: relative;
+    }
+    .pipeline-node.active .pipeline-circle {
+      border-color: var(--accent-emerald); color: var(--accent-emerald);
+      box-shadow: 0 0 16px rgba(16,185,129,0.3), 0 0 40px rgba(16,185,129,0.1);
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+    .pipeline-node.completed .pipeline-circle {
+      border-color: var(--accent-emerald); background: var(--accent-emerald); color: #fff;
+    }
+    .pipeline-node.error .pipeline-circle {
+      border-color: var(--error-red); background: var(--error-red); color: #fff;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 16px rgba(16,185,129,0.3), 0 0 40px rgba(16,185,129,0.1); }
+      50% { box-shadow: 0 0 24px rgba(16,185,129,0.5), 0 0 60px rgba(16,185,129,0.15); }
+    }
+    .pipeline-label {
+      font-size: 0.7rem; font-weight: 600; color: var(--text-muted);
+      text-align: center; letter-spacing: 0.02em; transition: color 0.3s;
+    }
+    .pipeline-sublabel {
+      font-size: 0.6rem; color: var(--text-muted); text-align: center;
+      max-width: 100px; line-height: 1.3; transition: color 0.3s;
+    }
+    .pipeline-node.active .pipeline-label,
+    .pipeline-node.completed .pipeline-label { color: var(--text-primary); }
+    .pipeline-node.active .pipeline-sublabel { color: var(--accent-emerald); }
+    .pipeline-node.completed .pipeline-sublabel { color: var(--text-secondary); }
+    .pipeline-connector {
+      flex-shrink: 0; width: 40px; height: 2px; background: var(--border-color);
+      position: relative; transition: background 0.4s;
+    }
+    .pipeline-connector.active { background: var(--accent-emerald); box-shadow: 0 0 8px rgba(16,185,129,0.3); }
+    /* Content block (copyable) */
+    .content-block {
+      background: var(--bg-primary); border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm); padding: 1rem;
+      font-size: 0.88rem; line-height: 1.7; color: var(--text-secondary);
+      white-space: pre-wrap; user-select: text; cursor: text;
+    }
+
+    /* Connection banner */
+    .connection-banner {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+      background: var(--bg-card); border: 1px solid var(--error-red);
+      border-radius: var(--radius-sm); padding: 0.6rem 1.2rem;
+      display: flex; align-items: center; gap: 1rem; z-index: 100;
+      box-shadow: 0 4px 30px rgba(239,68,68,0.15);
+    }
+    .connection-msg { font-size: 0.75rem; font-weight: 600; color: var(--error-red); letter-spacing: 0.06em; }
+    .btn-reconnect {
+      padding: 0.35rem 0.8rem; background: var(--error-red); color: #fff;
+      border: none; border-radius: 6px; font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.04em; cursor: pointer; transition: background 0.2s;
+    }
+    .btn-reconnect:hover { background: #DC2626; }
+
+    /* Error */
+    .error-message {
+      background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+      border-radius: var(--radius-sm); padding: 0.6rem 1rem; margin-top: 0.75rem;
+      color: var(--error-red); font-size: 0.85rem;
+    }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+
+    /* Proposals */
+    .proposals-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .proposals-grid.single-col { grid-template-columns: 1fr; max-width: 700px; margin: 0 auto; }
+
+    .proposal-card {
+      background: var(--bg-primary); border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm); overflow: hidden;
+      display: flex; flex-direction: column; transition: border-color 0.3s;
+    }
+    .proposal-card:hover { border-color: #2A3548; }
+    .proposal-card.recommended { border-color: var(--accent-amber); }
+
+    .proposal-card-header {
+      padding: 0.75rem 1rem; display: flex; align-items: center;
+      justify-content: space-between; border-bottom: 1px solid var(--border-color);
+    }
+    .proposal-card[data-agent="a"] .proposal-card-header { border-top: 2px solid var(--accent-emerald); }
+    .proposal-card[data-agent="b"] .proposal-card-header { border-top: 2px solid var(--accent-amber); }
+    .proposal-card[data-agent="c"] .proposal-card-header { border-top: 2px solid var(--accent-violet); }
+
+    .proposal-agent-info { display: flex; align-items: center; gap: 0.5rem; }
+    .proposal-agent-icon {
+      width: 26px; height: 26px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 700; color: #fff;
+    }
+    .proposal-card[data-agent="a"] .proposal-agent-icon { background: var(--accent-emerald); }
+    .proposal-card[data-agent="b"] .proposal-agent-icon { background: var(--accent-amber); }
+    .proposal-card[data-agent="c"] .proposal-agent-icon { background: var(--accent-violet); }
+
+    .proposal-agent-name { font-size: 0.8rem; font-weight: 600; color: var(--text-primary); }
+    .proposal-badge-group { display: flex; align-items: center; gap: 0.4rem; }
+    .proposal-score-badge {
+      font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem;
+      border-radius: 4px; background: rgba(255,255,255,0.04); color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    .badge-recommended {
+      font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.5rem;
+      border-radius: 4px; background: var(--accent-amber); color: #000;
+      letter-spacing: 0.04em;
+    }
+    .proposal-card-actions {
+      padding: 0 1rem; display: flex; gap: 0.4rem; justify-content: flex-end;
+      padding-top: 0.5rem;
+    }
+    .proposal-card-body {
+      padding: 1rem; flex: 1; font-size: 0.85rem; line-height: 1.7;
+      color: var(--text-secondary); white-space: pre-wrap;
+      max-height: 320px; overflow-y: auto; user-select: text;
+    }
+    .proposal-card-body::-webkit-scrollbar { width: 3px; }
+    .proposal-card-body::-webkit-scrollbar-track { background: transparent; }
+    .proposal-card-body::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+
+    /* Rationale */
+    .rationale-box {
+      background: var(--bg-card-alt); border: 1px solid var(--border-color);
+      border-left: 3px solid var(--accent-amber); border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem; margin-bottom: 1.25rem;
+      font-size: 0.85rem; line-height: 1.7; color: var(--text-secondary);
+    }
+    .rationale-label {
+      font-size: 0.7rem; font-weight: 700; color: var(--accent-amber);
+      letter-spacing: 0.06em; margin-bottom: 0.4rem; text-transform: uppercase;
+    }
+
+    /* Scoring */
+    .scoring-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+    .radar-chart-wrapper {
+      background: var(--bg-primary); border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm); padding: 1rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .radar-chart-wrapper canvas { max-width: 100%; max-height: 360px; }
+    .score-table-wrapper { overflow-x: auto; }
+    .score-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .score-table th, .score-table td {
+      padding: 0.55rem 0.7rem; text-align: left; border-bottom: 1px solid var(--border-color);
+    }
+    .score-table th {
+      color: var(--text-muted); font-weight: 600; font-size: 0.7rem;
+      text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
+    }
+    .score-table td { color: var(--text-secondary); }
+    .score-cell { display: flex; flex-direction: column; gap: 0.1rem; }
+    .score-value { font-weight: 700; font-size: 0.9rem; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+    .score-value.score-high { color: var(--accent-emerald); }
+    .score-value.score-low { color: var(--error-red); }
+    .score-comment { font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; }
+    .th-agent-a { color: var(--accent-emerald) !important; }
+    .th-agent-b { color: var(--accent-amber) !important; }
+    .th-agent-c { color: var(--accent-violet) !important; }
+
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      .proposals-grid { grid-template-columns: 1fr; }
+      .scoring-layout { grid-template-columns: 1fr; }
+      .pipeline { justify-content: flex-start; }
+    }
+</style>
+<script>
+(function () {
+  'use strict';
+
+  var textarea = document.getElementById('user-input');
+  var btnStart = document.getElementById('btn-start');
+  var charCount = document.getElementById('input-hint');
+  var pipelineSection = document.getElementById('pipeline-section');
+  var pipelineEl = document.getElementById('pipeline');
+  var connectionBanner = document.getElementById('connection-banner');
+  var btnReconnect = document.getElementById('btn-reconnect');
+
+  var PHASES = [
+    { key: 'phase_1_initial_insights', label: 'PHASE 1', desc: '初步見解' },
+    { key: 'phase_2_cross_examination', label: 'PHASE 2', desc: '交叉詰問' },
+    { key: 'phase_3_final_revision', label: 'PHASE 3', desc: '最終修正' },
+    { key: 'phase_4_synthesis', label: 'PHASE 4', desc: '方案收斂' },
+    { key: 'phase_5_scoring', label: 'PHASE 5', desc: '獨立評分' },
+    { key: 'completed', label: 'PHASE 6', desc: '最終輸出' }
+  ];
+
+  var currentSessionId = null;
+  var eventSource = null;
+  var isSingleCol = false;
+
+  textarea.addEventListener('input', function () {
+    charCount.textContent = this.value.length + ' 字';
+  });
+
+  function buildPipeline() {
+    pipelineEl.innerHTML = '';
+    PHASES.forEach(function (phase, idx) {
+      if (idx > 0) {
+        var conn = document.createElement('div');
+        conn.className = 'pipeline-connector';
+        conn.dataset.afterPhase = PHASES[idx - 1].key;
+        pipelineEl.appendChild(conn);
+      }
+      var node = document.createElement('div');
+      node.className = 'pipeline-node';
+      node.dataset.phase = phase.key;
+      node.innerHTML =
+        '<div class="pipeline-circle">' + (idx + 1) + '</div>' +
+        '<div class="pipeline-label">' + phase.label + '</div>' +
+        '<div class="pipeline-sublabel">' + phase.desc + '</div>';
+      pipelineEl.appendChild(node);
+    });
+  }
+  function setPhaseState(phaseKey, state) {
+    var nodes = pipelineEl.querySelectorAll('.pipeline-node');
+    nodes.forEach(function (n) {
+      if (n.dataset.phase === phaseKey) {
+        n.classList.remove('active', 'completed', 'error');
+        n.classList.add(state);
+        if (state === 'active') n.querySelector('.pipeline-sublabel').textContent = '進行中...';
+        else if (state === 'completed') n.querySelector('.pipeline-sublabel').textContent = '完成';
+        else if (state === 'error') n.querySelector('.pipeline-sublabel').textContent = '錯誤';
+      }
+    });
+    // Activate connectors for completed phases
+    var connectors = pipelineEl.querySelectorAll('.pipeline-connector');
+    connectors.forEach(function (c) {
+      var afterKey = c.dataset.afterPhase;
+      var afterNode = pipelineEl.querySelector('[data-phase="' + afterKey + '"]');
+      if (afterNode && (afterNode.classList.contains('completed'))) {
+        c.classList.add('active');
+      }
+    });
+  }
+
+  function markPrecedingCompleted(phaseKey) {
+    for (var i = 0; i < PHASES.length; i++) {
+      if (PHASES[i].key === phaseKey) break;
+      setPhaseState(PHASES[i].key, 'completed');
+    }
+  }
+
+  function setInputDisabled(disabled) {
+    textarea.disabled = disabled;
+    btnStart.disabled = disabled;
+    if (disabled) btnStart.classList.add('loading');
+    else btnStart.classList.remove('loading');
+  }
+
+  function showInputError(msg) {
+    clearInputError();
+    var div = document.createElement('div');
+    div.className = 'error-message';
+    div.setAttribute('role', 'alert');
+    div.textContent = msg;
+    textarea.parentNode.insertBefore(div, textarea.nextSibling);
+  }
+
+  function clearInputError() {
+    var existing = document.querySelector('.input-section .error-message');
+    if (existing) existing.remove();
+  }
+  function connectSSE(sessionId) {
+    if (eventSource) eventSource.close();
+    eventSource = new EventSource('/debates/' + sessionId + '/stream');
+
+    eventSource.addEventListener('phase_start', function (e) {
+      var data = JSON.parse(e.data);
+      markPrecedingCompleted(data.phase);
+      setPhaseState(data.phase, 'active');
+    });
+    eventSource.addEventListener('phase_complete', function (e) {
+      var data = JSON.parse(e.data);
+      setPhaseState(data.phase, 'completed');
+    });
+    eventSource.addEventListener('debate_complete', function () {
+      PHASES.forEach(function (p) { setPhaseState(p.key, 'completed'); });
+      btnStart.classList.remove('loading');
+      closeSSE();
+      fetchFinalState(sessionId);
+    });
+    eventSource.addEventListener('error', function (e) {
+      if (e.data) {
+        var data = JSON.parse(e.data);
+        setPhaseState(data.phase, 'error');
+        showInputError(data.error_message || '辯論過程中發生錯誤');
+      }
+      btnStart.classList.remove('loading');
+      closeSSE();
+    });
+    eventSource.onerror = function () {
+      connectionBanner.style.display = 'flex';
+      closeSSE();
+    };
+  }
+
+  function closeSSE() {
+    if (eventSource) { eventSource.close(); eventSource = null; }
+  }
+
+  btnReconnect.addEventListener('click', function () {
+    connectionBanner.style.display = 'none';
+    if (currentSessionId) fetchCurrentState(currentSessionId);
+  });
+
+  function fetchCurrentState(sessionId) {
+    fetch('/debates/' + sessionId).then(function (r) {
+      if (!r.ok) throw new Error('無法取得辯論狀態');
+      return r.json();
+    }).then(function (state) {
+      rebuildFromState(state);
+      if (state.current_phase !== 'completed' && state.current_phase !== 'failed') {
+        connectSSE(sessionId);
+      }
+    }).catch(function (err) { showInputError('重新連線失敗：' + err.message); });
+  }
+
+  function fetchFinalState(sessionId) {
+    fetch('/debates/' + sessionId).then(function (r) {
+      if (!r.ok) throw new Error('無法取得辯論結果');
+      return r.json();
+    }).then(function (state) {
+      window.__debateResult = state;
+      showUserInput(state.user_input);
+      renderProposals(state);
+      renderScoring(state);
+    }).catch(function () {});
+  }
+
+  function rebuildFromState(state) {
+    var phaseOrder = PHASES.map(function (p) { return p.key; });
+    var currentIdx = phaseOrder.indexOf(state.current_phase);
+    if (state.current_phase === 'failed') {
+      if (state.a1 && state.b1) setPhaseState(PHASES[0].key, 'completed');
+      if (state.a2 && state.b2) setPhaseState(PHASES[1].key, 'completed');
+      if (state.a3 && state.b3) setPhaseState(PHASES[2].key, 'completed');
+      if (state.c1) setPhaseState(PHASES[3].key, 'completed');
+      if (state.scores) setPhaseState(PHASES[4].key, 'completed');
+      return;
+    }
+    PHASES.forEach(function (p, i) {
+      if (i < currentIdx) setPhaseState(p.key, 'completed');
+      else if (i === currentIdx) setPhaseState(p.key, state.current_phase === 'completed' ? 'completed' : 'active');
+    });
+  }
+  btnStart.addEventListener('click', startDebate);
+
+  function startDebate() {
+    clearInputError();
+    var input = textarea.value.trim();
+    if (!input) { showInputError('請輸入您的想法或問題'); textarea.focus(); return; }
+    setInputDisabled(true);
+
+    fetch('/debates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_input: input })
+    }).then(function (r) {
+      if (!r.ok) return r.json().then(function (b) { throw new Error(b.detail || '啟動失敗'); });
+      return r.json();
+    }).then(function (data) {
+      currentSessionId = data.session_id;
+      buildPipeline();
+      pipelineSection.style.display = 'block';
+      pipelineSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      connectSSE(currentSessionId);
+    }).catch(function (err) {
+      setInputDisabled(false);
+      showInputError(err.message || '啟動辯論失敗');
+    });
+  }
+
+  /* Show user input */
+  function showUserInput(text) {
+    var section = document.getElementById('user-input-display');
+    document.getElementById('user-input-text').textContent = text;
+    section.style.display = 'block';
+  }
+
+  /* Copy */
+  window.copyText = function (elementId) {
+    var el = document.getElementById(elementId);
+    if (!el) return;
+    var text = el.textContent || el.innerText;
+    navigator.clipboard.writeText(text).then(function () {
+      // brief visual feedback could be added
+    });
+  };
+
+  window.copyProposal = function (agentKey) {
+    var state = window.__debateResult;
+    if (!state) return;
+    var fieldMap = { a: 'a3', b: 'b3', c: 'c1' };
+    var text = state[fieldMap[agentKey]] || '';
+    navigator.clipboard.writeText(text);
+  };
+  /* Export */
+  window.exportAll = function (format) {
+    var state = window.__debateResult;
+    if (!state) return;
+    var nameMap = { a3: '創新方案 (A)', b3: '保守方案 (B)', c1: '折衷方案 (C)' };
+
+    if (format === 'txt') {
+      var lines = [];
+      lines.push('=== 多智能體辯論結果 ===\n');
+      lines.push('【原始輸入】\n' + state.user_input + '\n');
+      ['a3', 'b3', 'c1'].forEach(function (k) {
+        lines.push('【' + nameMap[k] + '】\n' + (state[k] || '（無）') + '\n');
+      });
+      if (state.scores) {
+        lines.push('【推薦方案】' + nameMap[state.scores.recommended] || state.scores.recommended);
+        if (state.scores.rationale) lines.push('\n【評分理由】\n' + state.scores.rationale);
+      }
+      var blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+      downloadBlob(blob, 'debate-result.txt');
+    } else if (format === 'html') {
+      var html = '<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8">';
+      html += '<title>辯論結果</title>';
+      html += '<style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.8;color:#222}';
+      html += 'h1{font-size:1.4rem;border-bottom:2px solid #10B981;padding-bottom:0.5rem}';
+      html += 'h2{font-size:1.1rem;margin-top:2rem;color:#334155}';
+      html += '.rationale{background:#FFFBEB;border-left:3px solid #F59E0B;padding:1rem;margin:1rem 0}';
+      html += 'pre{white-space:pre-wrap;background:#F8FAFC;padding:1rem;border-radius:8px;font-size:0.9rem}</style></head><body>';
+      html += '<h1>多智能體辯論結果</h1>';
+      html += '<h2>原始輸入</h2><pre>' + esc(state.user_input) + '</pre>';
+      ['a3', 'b3', 'c1'].forEach(function (k) {
+        html += '<h2>' + esc(nameMap[k]) + '</h2><pre>' + esc(state[k] || '（無）') + '</pre>';
+      });
+      if (state.scores) {
+        html += '<h2>推薦方案：' + esc(nameMap[state.scores.recommended] || state.scores.recommended) + '</h2>';
+        if (state.scores.rationale) html += '<div class="rationale"><strong>評分理由</strong><br>' + esc(state.scores.rationale) + '</div>';
+      }
+      html += '</body></html>';
+      var blob2 = new Blob([html], { type: 'text/html;charset=utf-8' });
+      downloadBlob(blob2, 'debate-result.html');
+    }
+  };
+
+  function downloadBlob(blob, filename) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(str));
+    return d.innerHTML;
+  }
+
+  /* Toggle view */
+  window.toggleView = function () {
+    isSingleCol = !isSingleCol;
+    var c = document.getElementById('proposals-content');
+    c.classList.toggle('single-col', isSingleCol);
+  };
+  /* Proposals */
+  var AGENT_META = {
+    a: { icon: 'A', name: '創新方案', field: 'a3', scoreKey: 'a3_score' },
+    b: { icon: 'B', name: '保守方案', field: 'b3', scoreKey: 'b3_score' },
+    c: { icon: 'C', name: '折衷方案', field: 'c1', scoreKey: 'c1_score' }
+  };
+  var DIMENSIONS = [
+    { key: 'feasibility', label: '可行性' },
+    { key: 'innovation', label: '創新性' },
+    { key: 'risk_control', label: '風險控制' },
+    { key: 'cost_effectiveness', label: '成本效益' },
+    { key: 'overall_recommendation', label: '綜合推薦' }
+  ];
+  var radarChartInstance = null;
+
+  function getTotalScore(ps) {
+    if (!ps) return 0;
+    var t = 0;
+    DIMENSIONS.forEach(function (d) { if (ps[d.key]) t += ps[d.key].score; });
+    return t;
+  }
+
+  function getHighLow(ps) {
+    if (!ps) return { high: [], low: [] };
+    var max = -1, min = 11;
+    DIMENSIONS.forEach(function (d) {
+      var s = ps[d.key] ? ps[d.key].score : 0;
+      if (s > max) max = s;
+      if (s < min) min = s;
+    });
+    var high = [], low = [];
+    DIMENSIONS.forEach(function (d) {
+      var s = ps[d.key] ? ps[d.key].score : 0;
+      if (s === max) high.push(d.key);
+      if (s === min && min !== max) low.push(d.key);
+    });
+    return { high: high, low: low };
+  }
+
+  function renderProposals(state) {
+    if (!state) return;
+    var scores = state.scores;
+    var recommended = scores ? scores.recommended : null;
+    var container = document.getElementById('proposals-content');
+    container.innerHTML = '';
+
+    ['a', 'b', 'c'].forEach(function (agentKey) {
+      var meta = AGENT_META[agentKey];
+      var text = state[meta.field] || '（無內容）';
+      var ps = scores ? scores[meta.scoreKey] : null;
+      var total = getTotalScore(ps);
+      var isRec = recommended && (
+        (agentKey === 'a' && recommended === 'a3') ||
+        (agentKey === 'b' && recommended === 'b3') ||
+        (agentKey === 'c' && recommended === 'c1')
+      );
+
+      var card = document.createElement('div');
+      card.className = 'proposal-card' + (isRec ? ' recommended' : '');
+      card.dataset.agent = agentKey;
+      card.setAttribute('role', 'listitem');
+
+      var badgeHtml = isRec ? '<span class="badge-recommended">RECOMMENDED</span>' : '';
+
+      card.innerHTML =
+        '<div class="proposal-card-header">' +
+          '<div class="proposal-agent-info">' +
+            '<span class="proposal-agent-icon">' + meta.icon + '</span>' +
+            '<span class="proposal-agent-name">' + meta.name + '</span>' +
+          '</div>' +
+          '<div class="proposal-badge-group">' +
+            badgeHtml +
+            (scores ? '<span class="proposal-score-badge">' + total + ' pts</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="proposal-card-actions">' +
+          '<button class="btn-icon" onclick="copyProposal(\'' + agentKey + '\')" title="複製">COPY</button>' +
+        '</div>' +
+        '<div class="proposal-card-body">' + esc(text) + '</div>';
+
+      container.appendChild(card);
+    });
+
+    document.getElementById('proposals-section').style.display = 'block';
+  }
+  /* Scoring */
+  function renderScoring(state) {
+    if (!state || !state.scores) return;
+    var scores = state.scores;
+
+    // Rationale
+    if (scores.rationale) {
+      var box = document.getElementById('rationale-box');
+      box.innerHTML = '<div class="rationale-label">EVALUATION RATIONALE</div>' + esc(scores.rationale);
+      box.style.display = 'block';
+    }
+
+    renderRadarChart(scores);
+    renderScoreTable(scores);
+    document.getElementById('scoring-section').style.display = 'block';
+  }
+
+  function renderRadarChart(scores) {
+    var labels = DIMENSIONS.map(function (d) { return d.label; });
+    function getData(sk) {
+      var ps = scores[sk];
+      if (!ps) return labels.map(function () { return 0; });
+      return DIMENSIONS.map(function (d) { return ps[d.key] ? ps[d.key].score : 0; });
+    }
+    var ctx = document.getElementById('radar-chart').getContext('2d');
+    if (radarChartInstance) radarChartInstance.destroy();
+
+    radarChartInstance = new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: '創新方案 (A)', data: getData('a3_score'), borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.1)', pointBackgroundColor: '#10B981', borderWidth: 2, pointRadius: 3 },
+          { label: '保守方案 (B)', data: getData('b3_score'), borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.1)', pointBackgroundColor: '#F59E0B', borderWidth: 2, pointRadius: 3 },
+          { label: '折衷方案 (C)', data: getData('c1_score'), borderColor: '#8B5CF6', backgroundColor: 'rgba(139,92,246,0.1)', pointBackgroundColor: '#8B5CF6', borderWidth: 2, pointRadius: 3 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        scales: {
+          r: {
+            min: 0, max: 10,
+            ticks: { stepSize: 2, color: '#505A6E', backdropColor: 'transparent', font: { size: 10 } },
+            grid: { color: 'rgba(30,42,58,0.8)' },
+            angleLines: { color: 'rgba(30,42,58,0.8)' },
+            pointLabels: { color: '#8B95A8', font: { size: 11 } }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: '#8B95A8', padding: 16, usePointStyle: true, pointStyle: 'circle', font: { size: 11 } }
+          }
+        }
+      }
+    });
+  }
+
+  function renderScoreTable(scores) {
+    var table = document.getElementById('score-table');
+    var thead = table.querySelector('thead');
+    var tbody = table.querySelector('tbody');
+    var hlA = getHighLow(scores.a3_score);
+    var hlB = getHighLow(scores.b3_score);
+    var hlC = getHighLow(scores.c1_score);
+
+    thead.innerHTML = '<tr><th>DIMENSION</th><th class="th-agent-a">A</th><th class="th-agent-b">B</th><th class="th-agent-c">C</th></tr>';
+    tbody.innerHTML = '';
+
+    DIMENSIONS.forEach(function (dim) {
+      var tr = document.createElement('tr');
+      function cell(ps, hl) {
+        if (!ps || !ps[dim.key]) return '<td>-</td>';
+        var ds = ps[dim.key];
+        var cls = '';
+        if (hl.high.indexOf(dim.key) !== -1) cls = ' score-high';
+        else if (hl.low.indexOf(dim.key) !== -1) cls = ' score-low';
+        return '<td><div class="score-cell"><span class="score-value' + cls + '">' + ds.score + '</span><span class="score-comment">' + esc(ds.comment) + '</span></div></td>';
+      }
+      tr.innerHTML = '<th>' + dim.label + '</th>' + cell(scores.a3_score, hlA) + cell(scores.b3_score, hlB) + cell(scores.c1_score, hlC);
+      tbody.appendChild(tr);
+    });
+  }
+
+})();
+</script>
+</body>
+</html>
