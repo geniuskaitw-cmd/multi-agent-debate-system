@@ -1,143 +1,79 @@
-"""LangGraph 狀態機建構模組
+"""辯論流程引擎 — 支援動態輪數
 
-使用 LangGraph 的 StateGraph 建構辯論流程圖。
-Phase 1-3 中 Agent A 與 Agent B 平行執行，
-Phase 4 由 Agent C 單獨執行，Phase 5 由 Agent D 單獨執行。
+不再使用 LangGraph 固定圖，改用 async 迴圈支援 N 輪辯論。
+每輪 A/B 平行執行，最後 C → D 順序執行。
 """
 
 import asyncio
 import logging
+from typing import Callable
 
-from langgraph.graph import StateGraph, END
-
-from models import DebatePhase, DebateState
-from agents import node_a, node_b, node_c, node_d
+from models import DebatePhase, DebateState, PhaseUpdate
+from agents import run_agent_a, run_agent_b, run_agent_c, run_agent_d, LLMCallError
 
 logger = logging.getLogger(__name__)
 
 
-async def _parallel_ab(state: DebateState, phase: DebatePhase) -> dict:
-    """平行執行 Agent A 與 Agent B，合併結果。
+async def run_debate(state: DebateState, push_event: Callable[[PhaseUpdate], None]) -> None:
+    """執行完整辯論流程。
 
-    先將 state 的 current_phase 設為指定階段，再呼叫 agent。
+    Args:
+        state: 辯論狀態（會被原地修改）
+        push_event: SSE 事件推送回呼
     """
-    state_with_phase = state.model_copy(update={"current_phase": phase})
-    result_a, result_b = await asyncio.gather(
-        node_a(state_with_phase),
-        node_b(state_with_phase),
-    )
-    merged = {}
-    merged.update(result_a)
-    merged.update(result_b)
-    return merged
+    total = state.total_rounds
 
+    try:
+        # === 辯論輪次 ===
+        for round_num in range(1, total + 1):
+            state.current_phase = DebatePhase.DEBATING
+            state.current_round = round_num
 
-async def phase_1_node(state: DebateState) -> dict:
-    """Phase 1：初步見解 — A1, B1 平行產出。"""
-    logger.info("Phase 1: 初步見解開始")
-    result = await _parallel_ab(state, DebatePhase.PHASE_1)
-    result["current_phase"] = DebatePhase.PHASE_1
-    return result
+            push_event(PhaseUpdate(
+                event_type="round_start", phase=DebatePhase.DEBATING,
+                current_round=round_num, total_rounds=total,
+            ))
 
+            logger.info("Round %d/%d 開始", round_num, total)
 
-async def phase_2_node(state: DebateState) -> dict:
-    """Phase 2：交叉詰問 — A2, B2 平行產出。"""
-    logger.info("Phase 2: 交叉詰問開始")
-    result = await _parallel_ab(state, DebatePhase.PHASE_2)
-    result["current_phase"] = DebatePhase.PHASE_2
-    return result
+            # A/B 平行
+            a_resp, b_resp = await asyncio.gather(
+                run_agent_a(state, round_num),
+                run_agent_b(state, round_num),
+            )
+            state.a_responses.append(a_resp)
+            state.b_responses.append(b_resp)
 
+            push_event(PhaseUpdate(
+                event_type="round_complete", phase=DebatePhase.DEBATING,
+                current_round=round_num, total_rounds=total,
+            ))
 
-async def phase_3_node(state: DebateState) -> dict:
-    """Phase 3：最終修正 — A3, B3 平行產出。"""
-    logger.info("Phase 3: 最終修正開始")
-    result = await _parallel_ab(state, DebatePhase.PHASE_3)
-    result["current_phase"] = DebatePhase.PHASE_3
-    return result
+        # === 方案收斂 ===
+        state.current_phase = DebatePhase.SYNTHESIS
+        push_event(PhaseUpdate(event_type="synthesis_start", phase=DebatePhase.SYNTHESIS,
+                               current_round=total, total_rounds=total))
 
+        state.c1 = await run_agent_c(state)
 
-async def phase_4_node(state: DebateState) -> dict:
-    """Phase 4：方案收斂 — Agent C 產出 C1。"""
-    logger.info("Phase 4: 方案收斂開始")
-    result = await node_c(state)
-    result["current_phase"] = DebatePhase.PHASE_4
-    return result
+        # === 獨立評分 ===
+        state.current_phase = DebatePhase.SCORING
+        push_event(PhaseUpdate(event_type="scoring_start", phase=DebatePhase.SCORING,
+                               current_round=total, total_rounds=total))
 
+        state.scores = await run_agent_d(state)
 
-async def phase_5_node(state: DebateState) -> dict:
-    """Phase 5：獨立評分 — Agent D 產出評分表。"""
-    logger.info("Phase 5: 獨立評分開始")
-    result = await node_d(state)
-    if "errors" not in result or not result.get("errors"):
-        result["current_phase"] = DebatePhase.PHASE_5
-    else:
-        result["current_phase"] = DebatePhase.FAILED
-    return result
+        # === 完成 ===
+        state.current_phase = DebatePhase.COMPLETED
+        push_event(PhaseUpdate(event_type="debate_complete", phase=DebatePhase.COMPLETED,
+                               current_round=total, total_rounds=total))
 
-
-async def completion_node(state: DebateState) -> dict:
-    """標記辯論完成。"""
-    logger.info("辯論流程完成")
-    return {"current_phase": DebatePhase.COMPLETED}
-
-
-def phase_router(state: DebateState) -> str:
-    """根據當前狀態決定下一個執行節點。
-
-    路由邏輯：
-    - INITIATED → phase_1
-    - PHASE_1 → phase_2
-    - PHASE_2 → phase_3
-    - PHASE_3 → phase_4 (node_c)
-    - PHASE_4 → phase_5 (node_d)
-    - PHASE_5 → completion
-    - FAILED → END
-    """
-    phase = state.current_phase
-
-    if phase == DebatePhase.INITIATED:
-        return "phase_1"
-    elif phase == DebatePhase.PHASE_1:
-        return "phase_2"
-    elif phase == DebatePhase.PHASE_2:
-        return "phase_3"
-    elif phase == DebatePhase.PHASE_3:
-        return "phase_4"
-    elif phase == DebatePhase.PHASE_4:
-        return "phase_5"
-    elif phase == DebatePhase.PHASE_5:
-        return "completion"
-    elif phase == DebatePhase.FAILED:
-        return END
-    else:
-        return END
-
-
-def build_debate_graph():
-    """建構並編譯辯論流程圖。
-
-    Returns:
-        編譯後的可執行工作流實例
-    """
-    graph = StateGraph(DebateState)
-
-    # 加入節點
-    graph.add_node("phase_1", phase_1_node)
-    graph.add_node("phase_2", phase_2_node)
-    graph.add_node("phase_3", phase_3_node)
-    graph.add_node("phase_4", phase_4_node)
-    graph.add_node("phase_5", phase_5_node)
-    graph.add_node("completion", completion_node)
-
-    # 設定入口點與路由
-    graph.set_entry_point("phase_1")
-
-    # Phase 1 完成後路由
-    graph.add_conditional_edges("phase_1", phase_router)
-    graph.add_conditional_edges("phase_2", phase_router)
-    graph.add_conditional_edges("phase_3", phase_router)
-    graph.add_conditional_edges("phase_4", phase_router)
-    graph.add_conditional_edges("phase_5", phase_router)
-    graph.add_edge("completion", END)
-
-    return graph.compile()
+    except (LLMCallError, Exception) as e:
+        error_msg = f"辯論流程失敗: {e}"
+        logger.error(error_msg)
+        state.current_phase = DebatePhase.FAILED
+        state.errors.append(error_msg)
+        push_event(PhaseUpdate(
+            event_type="error", phase=DebatePhase.FAILED,
+            error_message=error_msg,
+        ))

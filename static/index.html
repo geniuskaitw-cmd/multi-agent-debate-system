@@ -6,837 +6,641 @@
   <title>多智能體辯論與決策系統</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg-primary: #0B0F1A;
-      --bg-card: #131825;
-      --bg-card-alt: #1A2035;
-      --accent-emerald: #10B981;
-      --accent-amber: #F59E0B;
-      --accent-violet: #8B5CF6;
-      --accent-cyan: #06B6D4;
-      --text-primary: #E8ECF4;
-      --text-secondary: #8B95A8;
-      --text-muted: #505A6E;
-      --border-color: #1E2A3A;
-      --border-glow: rgba(16, 185, 129, 0.3);
-      --error-red: #EF4444;
-      --radius: 12px;
-      --radius-sm: 8px;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0B0F1A;--bg-card:#131825;--bg-alt:#1A2035;
+      --em:#10B981;--am:#F59E0B;--vi:#8B5CF6;--cy:#06B6D4;
+      --t1:#E8ECF4;--t2:#8B95A8;--t3:#505A6E;
+      --bd:#1E2A3A;--err:#EF4444;--r:12px;--rs:8px;
     }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans TC', sans-serif;
-      background-color: var(--bg-primary);
-      color: var(--text-primary);
-      line-height: 1.6;
-      min-height: 100vh;
-      background-image:
-        radial-gradient(ellipse 600px 400px at 20% 10%, rgba(16,185,129,0.04) 0%, transparent 70%),
-        radial-gradient(ellipse 500px 300px at 80% 80%, rgba(139,92,246,0.03) 0%, transparent 70%);
-    }
-
-    .container { max-width: 1280px; margin: 0 auto; padding: 2rem 1.5rem; }
-
-    /* Header */
-    .app-header { text-align: center; margin-bottom: 2.5rem; }
-    .app-header h1 {
-      font-size: 1.6rem; font-weight: 700; color: var(--text-primary);
-      letter-spacing: -0.02em; margin-bottom: 0.4rem;
-    }
-    .app-header h1 .accent { color: var(--accent-emerald); }
-    .app-header p { color: var(--text-secondary); font-size: 0.9rem; }
-
-    /* Card */
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-    }
-    .card-title {
-      font-size: 0.85rem; font-weight: 600; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--text-muted);
-      margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
-    }
-    .card-title::before {
-      content: ''; display: inline-block; width: 3px; height: 14px;
-      background: var(--accent-emerald); border-radius: 2px;
-    }
+    body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t1);line-height:1.6;min-height:100vh;
+      background-image:radial-gradient(ellipse 600px 400px at 20% 10%,rgba(16,185,129,.04) 0%,transparent 70%),radial-gradient(ellipse 500px 300px at 80% 80%,rgba(139,92,246,.03) 0%,transparent 70%)}
+    .container{max-width:1280px;margin:0 auto;padding:2rem 1.5rem}
+    .app-header{text-align:center;margin-bottom:2.5rem;position:relative}
+    .app-header h1{font-size:1.6rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.4rem}
+    .app-header h1 .ac{color:var(--em)}
+    .app-header p{color:var(--t2);font-size:.9rem}
+    .gear-btn{position:absolute;right:0;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:8px;border:1px solid var(--bd);background:transparent;color:var(--t3);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+    .gear-btn:hover{border-color:var(--t2);color:var(--t1)}
+    .card{background:var(--bg-card);border:1px solid var(--bd);border-radius:var(--r);padding:1.5rem;margin-bottom:1.5rem}
+    .card-title{font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+    .card-title::before{content:'';display:inline-block;width:3px;height:14px;background:var(--em);border-radius:2px}
 </style>
 </head>
 <body>
-  <div class="container">
-    <header class="app-header" role="banner">
-      <h1>Multi-Agent <span class="accent">Debate</span> System</h1>
-      <p>輸入您的想法，四個 AI 智能體將進行結構化辯論，為您產出最佳方案</p>
-    </header>
+<div class="container">
+  <header class="app-header" role="banner">
+    <h1>Multi-Agent <span class="ac">Debate</span> System</h1>
+    <p>輸入您的想法，AI 智能體將進行結構化辯論，為您產出最佳方案</p>
+    <button class="gear-btn" onclick="openSettings()" title="設定" aria-label="開啟設定">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </button>
+  </header>
 
-    <!-- Input -->
-    <section class="card input-section" aria-label="辯論輸入區域">
-      <h2 class="card-title">INPUT</h2>
-      <label for="user-input" class="sr-only">請輸入您的原始想法或問題</label>
-      <textarea id="user-input" placeholder="請輸入您的原始想法或問題，例如：「我們應該在東南亞市場推出新的 SaaS 產品嗎？」" rows="5"></textarea>
-      <div class="input-actions">
-        <span id="input-hint" class="char-count" aria-live="polite">0 字</span>
-        <button id="btn-start" class="btn-primary" type="button" aria-label="啟動辯論">
-          <span class="spinner" aria-hidden="true"></span>
-          <span class="btn-text">LAUNCH DEBATE</span>
-          <span class="btn-loading-text">PROCESSING...</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- Pipeline -->
-    <section id="pipeline-section" class="card" aria-label="辯論流程" style="display:none;">
-      <h2 class="card-title">PIPELINE</h2>
-      <div id="pipeline" class="pipeline"></div>
-    </section>
-
-    <!-- Connection Banner -->
-    <div id="connection-banner" class="connection-banner" role="alert" aria-live="assertive" style="display:none;">
-      <span class="connection-msg">CONNECTION LOST</span>
-      <button id="btn-reconnect" class="btn-reconnect" type="button">RECONNECT</button>
+  <!-- Input -->
+  <section class="card input-section">
+    <h2 class="card-title">INPUT</h2>
+    <textarea id="user-input" placeholder="請輸入您的原始想法或問題" rows="5"></textarea>
+    <div class="input-actions">
+      <span id="char-count" class="char-count">0 字</span>
+      <button id="btn-start" class="btn-primary" onclick="startDebate()">
+        <span class="spinner"></span><span class="btn-text">LAUNCH DEBATE</span><span class="btn-loading-text">PROCESSING...</span>
+      </button>
     </div>
+  </section>
 
-    <!-- User Input Display -->
-    <section id="user-input-display" class="card" style="display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
-        <h2 class="card-title" style="margin-bottom:0;">ORIGINAL INPUT</h2>
-        <button class="btn-icon" onclick="copyText('user-input-text')" title="複製" aria-label="複製輸入內容">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-        </button>
-      </div>
-      <div id="user-input-text" class="content-block"></div>
-    </section>
+  <!-- Pipeline -->
+  <section id="pipeline-section" class="card" style="display:none">
+    <h2 class="card-title">PIPELINE</h2>
+    <div id="pipeline" class="pipeline"></div>
+  </section>
 
-    <!-- Proposals -->
-    <section id="proposals-section" class="card" aria-label="方案對比" style="display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-        <h2 class="card-title" style="margin-bottom:0;">PROPOSALS</h2>
-        <div style="display:flex;gap:0.5rem;">
-          <button class="btn-icon" id="btn-toggle-view" onclick="toggleView()" title="切換檢視" aria-label="切換檢視模式">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-          </button>
-          <button class="btn-icon" onclick="exportAll('txt')" title="匯出 TXT" aria-label="匯出文字檔">TXT</button>
-          <button class="btn-icon" onclick="exportAll('html')" title="匯出 HTML (可轉PDF)" aria-label="匯出 HTML">PDF</button>
-        </div>
-      </div>
-      <div id="proposals-content" class="proposals-grid" role="list"></div>
-    </section>
-
-    <!-- Scoring -->
-    <section id="scoring-section" class="card" aria-label="評分" style="display:none;">
-      <h2 class="card-title">EVALUATION</h2>
-      <div id="rationale-box" class="rationale-box" style="display:none;"></div>
-      <div id="scoring-content" class="scoring-layout">
-        <div class="radar-chart-wrapper">
-          <canvas id="radar-chart" aria-label="雷達圖" role="img"></canvas>
-        </div>
-        <div class="score-table-wrapper">
-          <table id="score-table" class="score-table" aria-label="評分表">
-            <thead></thead><tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
+  <!-- Connection Banner -->
+  <div id="conn-banner" class="conn-banner" style="display:none">
+    <span>CONNECTION LOST</span>
+    <button onclick="reconnect()">RECONNECT</button>
   </div>
+</div>
+
+<!-- User Input Display -->
+<div class="container" style="padding-top:0">
+  <section id="input-display" class="card" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+      <h2 class="card-title" style="margin-bottom:0">ORIGINAL INPUT</h2>
+      <button class="btn-s" onclick="copyEl('input-text')">COPY</button>
+    </div>
+    <div id="input-text" class="cblock"></div>
+  </section>
+
+  <!-- Round History (collapsible) -->
+  <section id="history-section" class="card" style="display:none">
+    <div class="history-header" onclick="toggleHistory()">
+      <h2 class="card-title" style="margin-bottom:0;cursor:pointer">DEBATE HISTORY</h2>
+      <svg id="history-chevron" class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div id="history-body" class="history-body collapsed">
+      <div id="round-tabs" class="round-tabs"></div>
+      <div id="round-content" class="round-content"></div>
+    </div>
+  </section>
+
+  <!-- Proposals -->
+  <section id="proposals-section" class="card" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <h2 class="card-title" style="margin-bottom:0">FINAL PROPOSALS</h2>
+      <div style="display:flex;gap:.4rem">
+        <button class="btn-s" onclick="toggleView()">VIEW</button>
+        <button class="btn-s" onclick="exportAll('txt')">TXT</button>
+        <button class="btn-s" onclick="exportAll('html')">PDF</button>
+      </div>
+    </div>
+    <div id="proposals" class="pgrid"></div>
+  </section>
+
+  <!-- Scoring -->
+  <section id="scoring-section" class="card" style="display:none">
+    <h2 class="card-title">EVALUATION</h2>
+    <div id="rationale-box" class="rationale" style="display:none"></div>
+    <div class="scoring-layout">
+      <div class="radar-wrap"><canvas id="radar-chart"></canvas></div>
+      <div class="table-wrap"><table id="score-table"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-overlay" class="overlay" style="display:none" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">SETTINGS</span>
+      <button class="btn-s" onclick="closeSettings()">CLOSE</button>
+    </div>
+    <div class="modal-body">
+      <label class="field-label">辯論輪數 (1-10)</label>
+      <input type="number" id="cfg-rounds" min="1" max="10" value="3" class="field-input field-sm">
+      <label class="field-label">Agent A — 創新驅動者 System Prompt</label>
+      <textarea id="cfg-pa" class="field-input" rows="6"></textarea>
+      <label class="field-label">Agent B — 風險控制者 System Prompt</label>
+      <textarea id="cfg-pb" class="field-input" rows="6"></textarea>
+      <label class="field-label">Agent C — 總結決策者 System Prompt</label>
+      <textarea id="cfg-pc" class="field-input" rows="6"></textarea>
+      <label class="field-label">Agent D — 獨立評審 System Prompt</label>
+      <textarea id="cfg-pd" class="field-input" rows="6"></textarea>
+      <div style="display:flex;gap:.5rem;margin-top:1rem">
+        <button class="btn-primary" onclick="saveSettings()">SAVE</button>
+        <button class="btn-s" onclick="resetDefaults()">RESET DEFAULTS</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <style>
-    /* Input */
-    .input-section textarea {
-      width: 100%; min-height: 120px; padding: 1rem;
-      background: var(--bg-primary); border: 1px solid var(--border-color);
-      border-radius: var(--radius-sm); color: var(--text-primary);
-      font-family: inherit; font-size: 0.9rem; line-height: 1.6;
-      resize: vertical; transition: border-color 0.3s, box-shadow 0.3s;
-    }
-    .input-section textarea:focus {
-      outline: none; border-color: var(--accent-emerald);
-      box-shadow: 0 0 0 3px rgba(16,185,129,0.1);
-    }
-    .input-section textarea:disabled { opacity: 0.4; cursor: not-allowed; }
-    .input-section textarea::placeholder { color: var(--text-muted); }
-    .input-actions { display: flex; justify-content: flex-end; align-items: center; margin-top: 0.75rem; gap: 1rem; }
-    .char-count { color: var(--text-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+  textarea,.field-input{width:100%;padding:.8rem;background:var(--bg);border:1px solid var(--bd);border-radius:var(--rs);color:var(--t1);font-family:inherit;font-size:.88rem;line-height:1.6;resize:vertical;transition:border-color .3s}
+  textarea:focus,.field-input:focus{outline:none;border-color:var(--em);box-shadow:0 0 0 3px rgba(16,185,129,.1)}
+  textarea:disabled{opacity:.4;cursor:not-allowed}
+  textarea::placeholder{color:var(--t3)}
+  .input-actions{display:flex;justify-content:flex-end;align-items:center;margin-top:.75rem;gap:1rem}
+  .char-count{color:var(--t3);font-size:.75rem;font-variant-numeric:tabular-nums}
+  .btn-primary{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1.4rem;background:var(--em);color:#fff;border:none;border-radius:var(--rs);font-size:.78rem;font-weight:700;letter-spacing:.06em;cursor:pointer;transition:all .2s}
+  .btn-primary:hover:not(:disabled){background:#059669;box-shadow:0 0 20px rgba(16,185,129,.2)}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed}
+  .btn-primary .spinner{display:none;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+  .btn-primary.loading .spinner{display:inline-block}
+  .btn-primary.loading .btn-text{display:none}
+  .btn-primary.loading .btn-loading-text{display:inline}
+  .btn-primary .btn-loading-text{display:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .btn-s{display:inline-flex;align-items:center;padding:.3rem .6rem;background:transparent;border:1px solid var(--bd);border-radius:6px;color:var(--t3);font-size:.68rem;font-weight:600;letter-spacing:.04em;cursor:pointer;transition:all .2s}
+  .btn-s:hover{border-color:var(--t2);color:var(--t1)}
+  /* Pipeline */
+  .pipeline{display:flex;align-items:center;gap:0;overflow-x:auto;padding:1.2rem 0;justify-content:center}
+  .pnode{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:.5rem;min-width:100px}
+  .pcircle{width:52px;height:52px;border-radius:50%;border:2.5px solid var(--bd);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:700;color:var(--t3);transition:all .4s}
+  .pnode[data-type="round"] .pcircle{border-color:#2A3548}
+  .pnode[data-type="syn"] .pcircle{border-color:#2A3548}
+  .pnode[data-type="score"] .pcircle{border-color:#2A3548}
+  .pnode.active .pcircle{box-shadow:0 0 20px var(--node-color,.3);animation:pglow 2s ease-in-out infinite;border-color:var(--node-color);color:var(--node-color)}
+  .pnode.done .pcircle{background:var(--node-color);border-color:var(--node-color);color:#fff;box-shadow:0 0 12px color-mix(in srgb,var(--node-color) 40%,transparent)}
+  .pnode.err .pcircle{border-color:var(--err);background:var(--err);color:#fff}
+  @keyframes pglow{0%,100%{box-shadow:0 0 16px color-mix(in srgb,var(--node-color) 30%,transparent)}50%{box-shadow:0 0 28px color-mix(in srgb,var(--node-color) 50%,transparent)}}
+  .plabel{font-size:.78rem;font-weight:600;color:var(--t3);text-align:center;transition:color .3s}
+  .psub{font-size:.68rem;color:var(--t3);text-align:center;transition:color .3s}
+  .pnode.active .plabel,.pnode.done .plabel{color:var(--t1)}
+  .pnode.active .psub{color:var(--node-color)}
+  .pnode.done .psub{color:var(--t2)}
+  /* Flow connector with streaming light */
+  .pconn{flex-shrink:0;width:36px;height:3px;background:var(--bd);transition:background .4s;position:relative;overflow:hidden;border-radius:2px}
+  .pconn.active{background:linear-gradient(90deg,var(--conn-from,var(--em)),var(--conn-to,var(--em)));box-shadow:0 0 8px color-mix(in srgb,var(--conn-to) 30%,transparent)}
+  .pconn.flowing::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:flowlight 1.2s ease-in-out infinite}
+  @keyframes flowlight{0%{left:-100%}100%{left:100%}}
 
-    .btn-primary {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      padding: 0.65rem 1.5rem; background: var(--accent-emerald); color: #fff;
-      border: none; border-radius: var(--radius-sm); font-size: 0.8rem;
-      font-weight: 700; letter-spacing: 0.06em; cursor: pointer;
-      transition: background 0.2s, box-shadow 0.2s;
-    }
-    .btn-primary:hover:not(:disabled) { background: #059669; box-shadow: 0 0 20px rgba(16,185,129,0.2); }
-    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-primary .spinner {
-      display: none; width: 14px; height: 14px;
-      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
-      border-radius: 50%; animation: spin 0.6s linear infinite;
-    }
-    .btn-primary.loading .spinner { display: inline-block; }
-    .btn-primary.loading .btn-text { display: none; }
-    .btn-primary.loading .btn-loading-text { display: inline; }
-    .btn-primary .btn-loading-text { display: none; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+  /* Content block */
+  .cblock{background:var(--bg);border:1px solid var(--bd);border-radius:var(--rs);padding:1rem;font-size:.85rem;line-height:1.7;color:var(--t2);white-space:pre-wrap;user-select:text}
 
-    .btn-icon {
-      display: inline-flex; align-items: center; justify-content: center;
-      padding: 0.35rem 0.6rem; background: transparent;
-      border: 1px solid var(--border-color); border-radius: 6px;
-      color: var(--text-muted); font-size: 0.7rem; font-weight: 600;
-      letter-spacing: 0.04em; cursor: pointer; transition: all 0.2s;
-    }
-    .btn-icon:hover { border-color: var(--text-secondary); color: var(--text-primary); }
-    /* Pipeline - horizontal flow */
-    .pipeline {
-      display: flex; align-items: center; gap: 0; overflow-x: auto;
-      padding: 1rem 0;
-    }
-    .pipeline-node {
-      flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
-      gap: 0.5rem; min-width: 120px; position: relative;
-    }
-    .pipeline-circle {
-      width: 44px; height: 44px; border-radius: 50%;
-      border: 2px solid var(--border-color); background: var(--bg-primary);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
-      transition: all 0.4s ease; position: relative;
-    }
-    .pipeline-node.active .pipeline-circle {
-      border-color: var(--accent-emerald); color: var(--accent-emerald);
-      box-shadow: 0 0 16px rgba(16,185,129,0.3), 0 0 40px rgba(16,185,129,0.1);
-      animation: pulse-glow 2s ease-in-out infinite;
-    }
-    .pipeline-node.completed .pipeline-circle {
-      border-color: var(--accent-emerald); background: var(--accent-emerald); color: #fff;
-    }
-    .pipeline-node.error .pipeline-circle {
-      border-color: var(--error-red); background: var(--error-red); color: #fff;
-    }
-    @keyframes pulse-glow {
-      0%, 100% { box-shadow: 0 0 16px rgba(16,185,129,0.3), 0 0 40px rgba(16,185,129,0.1); }
-      50% { box-shadow: 0 0 24px rgba(16,185,129,0.5), 0 0 60px rgba(16,185,129,0.15); }
-    }
-    .pipeline-label {
-      font-size: 0.7rem; font-weight: 600; color: var(--text-muted);
-      text-align: center; letter-spacing: 0.02em; transition: color 0.3s;
-    }
-    .pipeline-sublabel {
-      font-size: 0.6rem; color: var(--text-muted); text-align: center;
-      max-width: 100px; line-height: 1.3; transition: color 0.3s;
-    }
-    .pipeline-node.active .pipeline-label,
-    .pipeline-node.completed .pipeline-label { color: var(--text-primary); }
-    .pipeline-node.active .pipeline-sublabel { color: var(--accent-emerald); }
-    .pipeline-node.completed .pipeline-sublabel { color: var(--text-secondary); }
-    .pipeline-connector {
-      flex-shrink: 0; width: 40px; height: 2px; background: var(--border-color);
-      position: relative; transition: background 0.4s;
-    }
-    .pipeline-connector.active { background: var(--accent-emerald); box-shadow: 0 0 8px rgba(16,185,129,0.3); }
-    /* Content block (copyable) */
-    .content-block {
-      background: var(--bg-primary); border: 1px solid var(--border-color);
-      border-radius: var(--radius-sm); padding: 1rem;
-      font-size: 0.88rem; line-height: 1.7; color: var(--text-secondary);
-      white-space: pre-wrap; user-select: text; cursor: text;
-    }
+  /* Connection banner */
+  .conn-banner{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--err);border-radius:var(--rs);padding:.5rem 1rem;display:flex;align-items:center;gap:1rem;z-index:100;font-size:.75rem;font-weight:600;color:var(--err)}
+  .conn-banner button{padding:.3rem .7rem;background:var(--err);color:#fff;border:none;border-radius:6px;font-size:.68rem;font-weight:700;cursor:pointer}
 
-    /* Connection banner */
-    .connection-banner {
-      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
-      background: var(--bg-card); border: 1px solid var(--error-red);
-      border-radius: var(--radius-sm); padding: 0.6rem 1.2rem;
-      display: flex; align-items: center; gap: 1rem; z-index: 100;
-      box-shadow: 0 4px 30px rgba(239,68,68,0.15);
-    }
-    .connection-msg { font-size: 0.75rem; font-weight: 600; color: var(--error-red); letter-spacing: 0.06em; }
-    .btn-reconnect {
-      padding: 0.35rem 0.8rem; background: var(--error-red); color: #fff;
-      border: none; border-radius: 6px; font-size: 0.7rem; font-weight: 700;
-      letter-spacing: 0.04em; cursor: pointer; transition: background 0.2s;
-    }
-    .btn-reconnect:hover { background: #DC2626; }
+  .error-message{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--rs);padding:.6rem 1rem;margin-top:.75rem;color:var(--err);font-size:.85rem}
+  /* Collapsible history */
+  .history-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+  .chevron{color:var(--t3);transition:transform .3s;flex-shrink:0}
+  .chevron.open{transform:rotate(180deg)}
+  .history-body{overflow:hidden;transition:max-height .4s ease,opacity .3s ease;max-height:2000px;opacity:1}
+  .history-body.collapsed{max-height:0;opacity:0;margin-top:0}
+  .history-body:not(.collapsed){margin-top:1rem}
+  /* Round tabs & history */
+  .round-tabs{display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap}
+  .round-tab{padding:.35rem .8rem;border:1px solid var(--bd);border-radius:6px;background:transparent;color:var(--t3);font-size:.7rem;font-weight:600;cursor:pointer;transition:all .2s}
+  .round-tab:hover{border-color:var(--t2);color:var(--t1)}
+  .round-tab.active{border-color:var(--em);color:var(--em);background:rgba(16,185,129,.08)}
+  .round-content{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .round-panel{background:var(--bg);border:1px solid var(--bd);border-radius:var(--rs);overflow:hidden}
+  .round-panel-header{padding:.6rem .8rem;border-bottom:1px solid var(--bd);font-size:.72rem;font-weight:600;display:flex;align-items:center;gap:.4rem}
+  .round-panel[data-agent="a"] .round-panel-header{border-top:2px solid var(--em);color:var(--em)}
+  .round-panel[data-agent="b"] .round-panel-header{border-top:2px solid var(--am);color:var(--am)}
+  .round-panel-body{padding:.8rem;font-size:.82rem;line-height:1.7;color:var(--t2);white-space:pre-wrap;max-height:300px;overflow-y:auto;user-select:text}
+  .round-panel-body::-webkit-scrollbar{width:3px}
+  .round-panel-body::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
 
-    /* Error */
-    .error-message {
-      background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
-      border-radius: var(--radius-sm); padding: 0.6rem 1rem; margin-top: 0.75rem;
-      color: var(--error-red); font-size: 0.85rem;
-    }
-
-    .sr-only {
-      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
-    }
-
-    /* Proposals */
-    .proposals-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .proposals-grid.single-col { grid-template-columns: 1fr; max-width: 700px; margin: 0 auto; }
-
-    .proposal-card {
-      background: var(--bg-primary); border: 1px solid var(--border-color);
-      border-radius: var(--radius-sm); overflow: hidden;
-      display: flex; flex-direction: column; transition: border-color 0.3s;
-    }
-    .proposal-card:hover { border-color: #2A3548; }
-    .proposal-card.recommended { border-color: var(--accent-amber); }
-
-    .proposal-card-header {
-      padding: 0.75rem 1rem; display: flex; align-items: center;
-      justify-content: space-between; border-bottom: 1px solid var(--border-color);
-    }
-    .proposal-card[data-agent="a"] .proposal-card-header { border-top: 2px solid var(--accent-emerald); }
-    .proposal-card[data-agent="b"] .proposal-card-header { border-top: 2px solid var(--accent-amber); }
-    .proposal-card[data-agent="c"] .proposal-card-header { border-top: 2px solid var(--accent-violet); }
-
-    .proposal-agent-info { display: flex; align-items: center; gap: 0.5rem; }
-    .proposal-agent-icon {
-      width: 26px; height: 26px; border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.7rem; font-weight: 700; color: #fff;
-    }
-    .proposal-card[data-agent="a"] .proposal-agent-icon { background: var(--accent-emerald); }
-    .proposal-card[data-agent="b"] .proposal-agent-icon { background: var(--accent-amber); }
-    .proposal-card[data-agent="c"] .proposal-agent-icon { background: var(--accent-violet); }
-
-    .proposal-agent-name { font-size: 0.8rem; font-weight: 600; color: var(--text-primary); }
-    .proposal-badge-group { display: flex; align-items: center; gap: 0.4rem; }
-    .proposal-score-badge {
-      font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem;
-      border-radius: 4px; background: rgba(255,255,255,0.04); color: var(--text-secondary);
-      font-variant-numeric: tabular-nums;
-    }
-    .badge-recommended {
-      font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.5rem;
-      border-radius: 4px; background: var(--accent-amber); color: #000;
-      letter-spacing: 0.04em;
-    }
-    .proposal-card-actions {
-      padding: 0 1rem; display: flex; gap: 0.4rem; justify-content: flex-end;
-      padding-top: 0.5rem;
-    }
-    .proposal-card-body {
-      padding: 1rem; flex: 1; font-size: 0.85rem; line-height: 1.7;
-      color: var(--text-secondary); white-space: pre-wrap;
-      max-height: 320px; overflow-y: auto; user-select: text;
-    }
-    .proposal-card-body::-webkit-scrollbar { width: 3px; }
-    .proposal-card-body::-webkit-scrollbar-track { background: transparent; }
-    .proposal-card-body::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
-
-    /* Rationale */
-    .rationale-box {
-      background: var(--bg-card-alt); border: 1px solid var(--border-color);
-      border-left: 3px solid var(--accent-amber); border-radius: var(--radius-sm);
-      padding: 1rem 1.25rem; margin-bottom: 1.25rem;
-      font-size: 0.85rem; line-height: 1.7; color: var(--text-secondary);
-    }
-    .rationale-label {
-      font-size: 0.7rem; font-weight: 700; color: var(--accent-amber);
-      letter-spacing: 0.06em; margin-bottom: 0.4rem; text-transform: uppercase;
-    }
-
-    /* Scoring */
-    .scoring-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
-    .radar-chart-wrapper {
-      background: var(--bg-primary); border: 1px solid var(--border-color);
-      border-radius: var(--radius-sm); padding: 1rem;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .radar-chart-wrapper canvas { max-width: 100%; max-height: 360px; }
-    .score-table-wrapper { overflow-x: auto; }
-    .score-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-    .score-table th, .score-table td {
-      padding: 0.55rem 0.7rem; text-align: left; border-bottom: 1px solid var(--border-color);
-    }
-    .score-table th {
-      color: var(--text-muted); font-weight: 600; font-size: 0.7rem;
-      text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
-    }
-    .score-table td { color: var(--text-secondary); }
-    .score-cell { display: flex; flex-direction: column; gap: 0.1rem; }
-    .score-value { font-weight: 700; font-size: 0.9rem; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-    .score-value.score-high { color: var(--accent-emerald); }
-    .score-value.score-low { color: var(--error-red); }
-    .score-comment { font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; }
-    .th-agent-a { color: var(--accent-emerald) !important; }
-    .th-agent-b { color: var(--accent-amber) !important; }
-    .th-agent-c { color: var(--accent-violet) !important; }
-
-    @media (max-width: 768px) {
-      .container { padding: 1rem; }
-      .proposals-grid { grid-template-columns: 1fr; }
-      .scoring-layout { grid-template-columns: 1fr; }
-      .pipeline { justify-content: flex-start; }
-    }
-</style>
-<script>
-(function () {
-  'use strict';
-
-  var textarea = document.getElementById('user-input');
-  var btnStart = document.getElementById('btn-start');
-  var charCount = document.getElementById('input-hint');
-  var pipelineSection = document.getElementById('pipeline-section');
-  var pipelineEl = document.getElementById('pipeline');
-  var connectionBanner = document.getElementById('connection-banner');
-  var btnReconnect = document.getElementById('btn-reconnect');
-
-  var PHASES = [
-    { key: 'phase_1_initial_insights', label: 'PHASE 1', desc: '初步見解' },
-    { key: 'phase_2_cross_examination', label: 'PHASE 2', desc: '交叉詰問' },
-    { key: 'phase_3_final_revision', label: 'PHASE 3', desc: '最終修正' },
-    { key: 'phase_4_synthesis', label: 'PHASE 4', desc: '方案收斂' },
-    { key: 'phase_5_scoring', label: 'PHASE 5', desc: '獨立評分' },
-    { key: 'completed', label: 'PHASE 6', desc: '最終輸出' }
-  ];
-
-  var currentSessionId = null;
-  var eventSource = null;
-  var isSingleCol = false;
-
-  textarea.addEventListener('input', function () {
-    charCount.textContent = this.value.length + ' 字';
-  });
-
-  function buildPipeline() {
-    pipelineEl.innerHTML = '';
-    PHASES.forEach(function (phase, idx) {
-      if (idx > 0) {
-        var conn = document.createElement('div');
-        conn.className = 'pipeline-connector';
-        conn.dataset.afterPhase = PHASES[idx - 1].key;
-        pipelineEl.appendChild(conn);
-      }
-      var node = document.createElement('div');
-      node.className = 'pipeline-node';
-      node.dataset.phase = phase.key;
-      node.innerHTML =
-        '<div class="pipeline-circle">' + (idx + 1) + '</div>' +
-        '<div class="pipeline-label">' + phase.label + '</div>' +
-        '<div class="pipeline-sublabel">' + phase.desc + '</div>';
-      pipelineEl.appendChild(node);
-    });
-  }
-  function setPhaseState(phaseKey, state) {
-    var nodes = pipelineEl.querySelectorAll('.pipeline-node');
-    nodes.forEach(function (n) {
-      if (n.dataset.phase === phaseKey) {
-        n.classList.remove('active', 'completed', 'error');
-        n.classList.add(state);
-        if (state === 'active') n.querySelector('.pipeline-sublabel').textContent = '進行中...';
-        else if (state === 'completed') n.querySelector('.pipeline-sublabel').textContent = '完成';
-        else if (state === 'error') n.querySelector('.pipeline-sublabel').textContent = '錯誤';
-      }
-    });
-    // Activate connectors for completed phases
-    var connectors = pipelineEl.querySelectorAll('.pipeline-connector');
-    connectors.forEach(function (c) {
-      var afterKey = c.dataset.afterPhase;
-      var afterNode = pipelineEl.querySelector('[data-phase="' + afterKey + '"]');
-      if (afterNode && (afterNode.classList.contains('completed'))) {
-        c.classList.add('active');
-      }
-    });
-  }
-
-  function markPrecedingCompleted(phaseKey) {
-    for (var i = 0; i < PHASES.length; i++) {
-      if (PHASES[i].key === phaseKey) break;
-      setPhaseState(PHASES[i].key, 'completed');
-    }
-  }
-
-  function setInputDisabled(disabled) {
-    textarea.disabled = disabled;
-    btnStart.disabled = disabled;
-    if (disabled) btnStart.classList.add('loading');
-    else btnStart.classList.remove('loading');
-  }
-
-  function showInputError(msg) {
-    clearInputError();
-    var div = document.createElement('div');
-    div.className = 'error-message';
-    div.setAttribute('role', 'alert');
-    div.textContent = msg;
-    textarea.parentNode.insertBefore(div, textarea.nextSibling);
-  }
-
-  function clearInputError() {
-    var existing = document.querySelector('.input-section .error-message');
-    if (existing) existing.remove();
-  }
-  function connectSSE(sessionId) {
-    if (eventSource) eventSource.close();
-    eventSource = new EventSource('/debates/' + sessionId + '/stream');
-
-    eventSource.addEventListener('phase_start', function (e) {
-      var data = JSON.parse(e.data);
-      markPrecedingCompleted(data.phase);
-      setPhaseState(data.phase, 'active');
-    });
-    eventSource.addEventListener('phase_complete', function (e) {
-      var data = JSON.parse(e.data);
-      setPhaseState(data.phase, 'completed');
-    });
-    eventSource.addEventListener('debate_complete', function () {
-      PHASES.forEach(function (p) { setPhaseState(p.key, 'completed'); });
-      btnStart.classList.remove('loading');
-      closeSSE();
-      fetchFinalState(sessionId);
-    });
-    eventSource.addEventListener('error', function (e) {
-      if (e.data) {
-        var data = JSON.parse(e.data);
-        setPhaseState(data.phase, 'error');
-        showInputError(data.error_message || '辯論過程中發生錯誤');
-      }
-      btnStart.classList.remove('loading');
-      closeSSE();
-    });
-    eventSource.onerror = function () {
-      connectionBanner.style.display = 'flex';
-      closeSSE();
-    };
-  }
-
-  function closeSSE() {
-    if (eventSource) { eventSource.close(); eventSource = null; }
-  }
-
-  btnReconnect.addEventListener('click', function () {
-    connectionBanner.style.display = 'none';
-    if (currentSessionId) fetchCurrentState(currentSessionId);
-  });
-
-  function fetchCurrentState(sessionId) {
-    fetch('/debates/' + sessionId).then(function (r) {
-      if (!r.ok) throw new Error('無法取得辯論狀態');
-      return r.json();
-    }).then(function (state) {
-      rebuildFromState(state);
-      if (state.current_phase !== 'completed' && state.current_phase !== 'failed') {
-        connectSSE(sessionId);
-      }
-    }).catch(function (err) { showInputError('重新連線失敗：' + err.message); });
-  }
-
-  function fetchFinalState(sessionId) {
-    fetch('/debates/' + sessionId).then(function (r) {
-      if (!r.ok) throw new Error('無法取得辯論結果');
-      return r.json();
-    }).then(function (state) {
-      window.__debateResult = state;
-      showUserInput(state.user_input);
-      renderProposals(state);
-      renderScoring(state);
-    }).catch(function () {});
-  }
-
-  function rebuildFromState(state) {
-    var phaseOrder = PHASES.map(function (p) { return p.key; });
-    var currentIdx = phaseOrder.indexOf(state.current_phase);
-    if (state.current_phase === 'failed') {
-      if (state.a1 && state.b1) setPhaseState(PHASES[0].key, 'completed');
-      if (state.a2 && state.b2) setPhaseState(PHASES[1].key, 'completed');
-      if (state.a3 && state.b3) setPhaseState(PHASES[2].key, 'completed');
-      if (state.c1) setPhaseState(PHASES[3].key, 'completed');
-      if (state.scores) setPhaseState(PHASES[4].key, 'completed');
-      return;
-    }
-    PHASES.forEach(function (p, i) {
-      if (i < currentIdx) setPhaseState(p.key, 'completed');
-      else if (i === currentIdx) setPhaseState(p.key, state.current_phase === 'completed' ? 'completed' : 'active');
-    });
-  }
-  btnStart.addEventListener('click', startDebate);
-
-  function startDebate() {
-    clearInputError();
-    var input = textarea.value.trim();
-    if (!input) { showInputError('請輸入您的想法或問題'); textarea.focus(); return; }
-    setInputDisabled(true);
-
-    fetch('/debates', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_input: input })
-    }).then(function (r) {
-      if (!r.ok) return r.json().then(function (b) { throw new Error(b.detail || '啟動失敗'); });
-      return r.json();
-    }).then(function (data) {
-      currentSessionId = data.session_id;
-      buildPipeline();
-      pipelineSection.style.display = 'block';
-      pipelineSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      connectSSE(currentSessionId);
-    }).catch(function (err) {
-      setInputDisabled(false);
-      showInputError(err.message || '啟動辯論失敗');
-    });
-  }
-
-  /* Show user input */
-  function showUserInput(text) {
-    var section = document.getElementById('user-input-display');
-    document.getElementById('user-input-text').textContent = text;
-    section.style.display = 'block';
-  }
-
-  /* Copy */
-  window.copyText = function (elementId) {
-    var el = document.getElementById(elementId);
-    if (!el) return;
-    var text = el.textContent || el.innerText;
-    navigator.clipboard.writeText(text).then(function () {
-      // brief visual feedback could be added
-    });
-  };
-
-  window.copyProposal = function (agentKey) {
-    var state = window.__debateResult;
-    if (!state) return;
-    var fieldMap = { a: 'a3', b: 'b3', c: 'c1' };
-    var text = state[fieldMap[agentKey]] || '';
-    navigator.clipboard.writeText(text);
-  };
-  /* Export */
-  window.exportAll = function (format) {
-    var state = window.__debateResult;
-    if (!state) return;
-    var nameMap = { a3: '創新方案 (A)', b3: '保守方案 (B)', c1: '折衷方案 (C)' };
-
-    if (format === 'txt') {
-      var lines = [];
-      lines.push('=== 多智能體辯論結果 ===\n');
-      lines.push('【原始輸入】\n' + state.user_input + '\n');
-      ['a3', 'b3', 'c1'].forEach(function (k) {
-        lines.push('【' + nameMap[k] + '】\n' + (state[k] || '（無）') + '\n');
-      });
-      if (state.scores) {
-        lines.push('【推薦方案】' + nameMap[state.scores.recommended] || state.scores.recommended);
-        if (state.scores.rationale) lines.push('\n【評分理由】\n' + state.scores.rationale);
-      }
-      var blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-      downloadBlob(blob, 'debate-result.txt');
-    } else if (format === 'html') {
-      var html = '<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8">';
-      html += '<title>辯論結果</title>';
-      html += '<style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.8;color:#222}';
-      html += 'h1{font-size:1.4rem;border-bottom:2px solid #10B981;padding-bottom:0.5rem}';
-      html += 'h2{font-size:1.1rem;margin-top:2rem;color:#334155}';
-      html += '.rationale{background:#FFFBEB;border-left:3px solid #F59E0B;padding:1rem;margin:1rem 0}';
-      html += 'pre{white-space:pre-wrap;background:#F8FAFC;padding:1rem;border-radius:8px;font-size:0.9rem}</style></head><body>';
-      html += '<h1>多智能體辯論結果</h1>';
-      html += '<h2>原始輸入</h2><pre>' + esc(state.user_input) + '</pre>';
-      ['a3', 'b3', 'c1'].forEach(function (k) {
-        html += '<h2>' + esc(nameMap[k]) + '</h2><pre>' + esc(state[k] || '（無）') + '</pre>';
-      });
-      if (state.scores) {
-        html += '<h2>推薦方案：' + esc(nameMap[state.scores.recommended] || state.scores.recommended) + '</h2>';
-        if (state.scores.rationale) html += '<div class="rationale"><strong>評分理由</strong><br>' + esc(state.scores.rationale) + '</div>';
-      }
-      html += '</body></html>';
-      var blob2 = new Blob([html], { type: 'text/html;charset=utf-8' });
-      downloadBlob(blob2, 'debate-result.html');
-    }
-  };
-
-  function downloadBlob(blob, filename) {
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  function esc(str) {
-    if (!str) return '';
-    var d = document.createElement('div');
-    d.appendChild(document.createTextNode(str));
-    return d.innerHTML;
-  }
-
-  /* Toggle view */
-  window.toggleView = function () {
-    isSingleCol = !isSingleCol;
-    var c = document.getElementById('proposals-content');
-    c.classList.toggle('single-col', isSingleCol);
-  };
   /* Proposals */
-  var AGENT_META = {
-    a: { icon: 'A', name: '創新方案', field: 'a3', scoreKey: 'a3_score' },
-    b: { icon: 'B', name: '保守方案', field: 'b3', scoreKey: 'b3_score' },
-    c: { icon: 'C', name: '折衷方案', field: 'c1', scoreKey: 'c1_score' }
+  .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+  .pgrid.single{grid-template-columns:1fr;max-width:700px;margin:0 auto}
+  .pcard{background:var(--bg);border:1px solid var(--bd);border-radius:var(--rs);overflow:hidden;display:flex;flex-direction:column;transition:border-color .3s}
+  .pcard:hover{border-color:#2A3548}
+  .pcard.rec{border-color:var(--am)}
+  .pcard-hd{padding:.6rem .8rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bd)}
+  .pcard[data-a="a"] .pcard-hd{border-top:2px solid var(--em)}
+  .pcard[data-a="b"] .pcard-hd{border-top:2px solid var(--am)}
+  .pcard[data-a="c"] .pcard-hd{border-top:2px solid var(--vi)}
+  .pcard-info{display:flex;align-items:center;gap:.4rem}
+  .pcard-icon{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:#fff}
+  .pcard[data-a="a"] .pcard-icon{background:var(--em)}
+  .pcard[data-a="b"] .pcard-icon{background:var(--am)}
+  .pcard[data-a="c"] .pcard-icon{background:var(--vi)}
+  .pcard-name{font-size:.78rem;font-weight:600}
+  .pcard-badges{display:flex;gap:.3rem;align-items:center}
+  .badge-score{font-size:.68rem;font-weight:700;padding:.1rem .4rem;border-radius:4px;background:rgba(255,255,255,.04);color:var(--t2)}
+  .badge-rec{font-size:.62rem;font-weight:700;padding:.1rem .4rem;border-radius:4px;background:var(--am);color:#000}
+  .pcard-acts{padding:.4rem .8rem;display:flex;justify-content:flex-end}
+  .pcard-body{padding:.8rem;flex:1;font-size:.82rem;line-height:1.7;color:var(--t2);white-space:pre-wrap;max-height:320px;overflow-y:auto;user-select:text}
+  .pcard-body::-webkit-scrollbar{width:3px}
+  .pcard-body::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+  /* Rationale & Scoring */
+  .rationale{background:var(--bg-alt);border:1px solid var(--bd);border-left:3px solid var(--am);border-radius:var(--rs);padding:1rem;margin-bottom:1rem;font-size:.82rem;line-height:1.7;color:var(--t2)}
+  .rationale-label{font-size:.68rem;font-weight:700;color:var(--am);letter-spacing:.06em;margin-bottom:.3rem;text-transform:uppercase}
+  .scoring-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start}
+  .radar-wrap{background:var(--bg);border:1px solid var(--bd);border-radius:var(--rs);padding:1rem;display:flex;align-items:center;justify-content:center}
+  .radar-wrap canvas{max-width:100%;max-height:360px}
+  .table-wrap{overflow-x:auto}
+  .table-wrap table{width:100%;border-collapse:collapse;font-size:.78rem}
+  .table-wrap th,.table-wrap td{padding:.5rem .6rem;text-align:left;border-bottom:1px solid var(--bd)}
+  .table-wrap th{color:var(--t3);font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:.04em}
+  .scell{display:flex;flex-direction:column;gap:.1rem}
+  .sval{font-weight:700;font-size:.88rem;color:var(--t1);font-variant-numeric:tabular-nums}
+  .sval.hi{color:var(--em)}.sval.lo{color:var(--err)}
+  .scmt{font-size:.7rem;color:var(--t3);line-height:1.3}
+  .th-a{color:var(--em)!important}.th-b{color:var(--am)!important}.th-c{color:var(--vi)!important}
+
+  /* Modal */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+  .modal{background:var(--bg-card);border:1px solid var(--bd);border-radius:var(--r);width:90%;max-width:700px;max-height:85vh;display:flex;flex-direction:column}
+  .modal-header{padding:1rem 1.5rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+  .modal-title{font-size:.8rem;font-weight:700;letter-spacing:.06em;color:var(--t3);text-transform:uppercase}
+  .modal-body{padding:1.5rem;overflow-y:auto;flex:1}
+  .field-label{display:block;font-size:.72rem;font-weight:600;color:var(--t3);margin-bottom:.3rem;margin-top:1rem;text-transform:uppercase;letter-spacing:.04em}
+  .field-label:first-child{margin-top:0}
+  .field-sm{max-width:120px}
+
+  @media(max-width:768px){
+    .round-content,.pgrid,.scoring-layout{grid-template-columns:1fr}
+    .pipeline{justify-content:flex-start}
+  }
+</style>
+
+<script>
+(function(){
+  'use strict';
+  var ta=document.getElementById('user-input'),btn=document.getElementById('btn-start'),cc=document.getElementById('char-count');
+  var pipeSec=document.getElementById('pipeline-section'),pipeEl=document.getElementById('pipeline');
+  var connBanner=document.getElementById('conn-banner');
+  var sessionId=null,es=null,singleCol=false;
+  var userConfig={rounds:3,prompt_a:'',prompt_b:'',prompt_c:'',prompt_d:''};
+  var defaults={};
+
+  ta.addEventListener('input',function(){cc.textContent=this.value.length+' 字'});
+
+  // Load defaults
+  fetch('/settings/defaults').then(function(r){return r.json()}).then(function(d){
+    defaults=d;
+    document.getElementById('cfg-rounds').value=d.default_rounds||3;
+    document.getElementById('cfg-pa').value=d.prompt_a||'';
+    document.getElementById('cfg-pb').value=d.prompt_b||'';
+    document.getElementById('cfg-pc').value=d.prompt_c||'';
+    document.getElementById('cfg-pd').value=d.prompt_d||'';
+  }).catch(function(){});
+
+  // Settings
+  window.openSettings=function(){document.getElementById('settings-overlay').style.display='flex'};
+  window.closeSettings=function(){document.getElementById('settings-overlay').style.display='none'};
+  window.saveSettings=function(){
+    userConfig.rounds=parseInt(document.getElementById('cfg-rounds').value)||3;
+    userConfig.prompt_a=document.getElementById('cfg-pa').value.trim();
+    userConfig.prompt_b=document.getElementById('cfg-pb').value.trim();
+    userConfig.prompt_c=document.getElementById('cfg-pc').value.trim();
+    userConfig.prompt_d=document.getElementById('cfg-pd').value.trim();
+    closeSettings();
   };
-  var DIMENSIONS = [
-    { key: 'feasibility', label: '可行性' },
-    { key: 'innovation', label: '創新性' },
-    { key: 'risk_control', label: '風險控制' },
-    { key: 'cost_effectiveness', label: '成本效益' },
-    { key: 'overall_recommendation', label: '綜合推薦' }
-  ];
-  var radarChartInstance = null;
+  window.resetDefaults=function(){
+    document.getElementById('cfg-rounds').value=defaults.default_rounds||3;
+    document.getElementById('cfg-pa').value=defaults.prompt_a||'';
+    document.getElementById('cfg-pb').value=defaults.prompt_b||'';
+    document.getElementById('cfg-pc').value=defaults.prompt_c||'';
+    document.getElementById('cfg-pd').value=defaults.prompt_d||'';
+  };
+  // Pipeline colors per node type
+  var nodeColors={round:'#06B6D4',syn:'#8B5CF6',score:'#F59E0B'};
 
-  function getTotalScore(ps) {
-    if (!ps) return 0;
-    var t = 0;
-    DIMENSIONS.forEach(function (d) { if (ps[d.key]) t += ps[d.key].score; });
-    return t;
+  function buildPipeline(totalRounds){
+    pipeEl.innerHTML='';
+    for(var i=1;i<=totalRounds;i++){
+      if(i>1){var c=document.createElement('div');c.className='pconn';c.dataset.after='r'+(i-1);c.style.setProperty('--conn-from',nodeColors.round);c.style.setProperty('--conn-to',nodeColors.round);pipeEl.appendChild(c)}
+      var n=document.createElement('div');n.className='pnode';n.dataset.id='r'+i;n.dataset.type='round';n.style.setProperty('--node-color',nodeColors.round);
+      n.innerHTML='<div class="pcircle">R'+i+'</div><div class="plabel">ROUND '+i+'</div><div class="psub">辯論</div>';
+      pipeEl.appendChild(n);
+    }
+    // Connector round→syn
+    var c2=document.createElement('div');c2.className='pconn';c2.dataset.after='r'+totalRounds;c2.style.setProperty('--conn-from',nodeColors.round);c2.style.setProperty('--conn-to',nodeColors.syn);pipeEl.appendChild(c2);
+    var ns=document.createElement('div');ns.className='pnode';ns.dataset.id='syn';ns.dataset.type='syn';ns.style.setProperty('--node-color',nodeColors.syn);
+    ns.innerHTML='<div class="pcircle">C</div><div class="plabel">SYNTHESIS</div><div class="psub">收斂</div>';
+    pipeEl.appendChild(ns);
+    // Connector syn→score
+    var c3=document.createElement('div');c3.className='pconn';c3.dataset.after='syn';c3.style.setProperty('--conn-from',nodeColors.syn);c3.style.setProperty('--conn-to',nodeColors.score);pipeEl.appendChild(c3);
+    var nd=document.createElement('div');nd.className='pnode';nd.dataset.id='score';nd.dataset.type='score';nd.style.setProperty('--node-color',nodeColors.score);
+    nd.innerHTML='<div class="pcircle">D</div><div class="plabel">SCORING</div><div class="psub">評分</div>';
+    pipeEl.appendChild(nd);
   }
 
-  function getHighLow(ps) {
-    if (!ps) return { high: [], low: [] };
-    var max = -1, min = 11;
-    DIMENSIONS.forEach(function (d) {
-      var s = ps[d.key] ? ps[d.key].score : 0;
-      if (s > max) max = s;
-      if (s < min) min = s;
+  function setPipeState(id,state){
+    var n=pipeEl.querySelector('[data-id="'+id+'"]');
+    if(!n)return;
+    n.classList.remove('active','done','err');
+    n.classList.add(state);
+    var sub=n.querySelector('.psub');
+    if(state==='active')sub.textContent='進行中...';
+    else if(state==='done')sub.textContent='完成';
+    else if(state==='err')sub.textContent='錯誤';
+    // Activate preceding connectors with flow animation
+    pipeEl.querySelectorAll('.pconn').forEach(function(c){
+      var afterId=c.dataset.after;
+      var afterN=pipeEl.querySelector('[data-id="'+afterId+'"]');
+      if(afterN&&afterN.classList.contains('done')){c.classList.add('active');c.classList.remove('flowing')}
     });
-    var high = [], low = [];
-    DIMENSIONS.forEach(function (d) {
-      var s = ps[d.key] ? ps[d.key].score : 0;
-      if (s === max) high.push(d.key);
-      if (s === min && min !== max) low.push(d.key);
-    });
-    return { high: high, low: low };
+    // Add flowing animation to connector leading INTO the active node
+    if(state==='active'){
+      pipeEl.querySelectorAll('.pconn').forEach(function(c){
+        var next=c.nextElementSibling;
+        if(next&&next.dataset.id===id){c.classList.add('active','flowing')}
+      });
+    }
   }
 
-  function renderProposals(state) {
-    if (!state) return;
-    var scores = state.scores;
-    var recommended = scores ? scores.recommended : null;
-    var container = document.getElementById('proposals-content');
-    container.innerHTML = '';
-
-    ['a', 'b', 'c'].forEach(function (agentKey) {
-      var meta = AGENT_META[agentKey];
-      var text = state[meta.field] || '（無內容）';
-      var ps = scores ? scores[meta.scoreKey] : null;
-      var total = getTotalScore(ps);
-      var isRec = recommended && (
-        (agentKey === 'a' && recommended === 'a3') ||
-        (agentKey === 'b' && recommended === 'b3') ||
-        (agentKey === 'c' && recommended === 'c1')
-      );
-
-      var card = document.createElement('div');
-      card.className = 'proposal-card' + (isRec ? ' recommended' : '');
-      card.dataset.agent = agentKey;
-      card.setAttribute('role', 'listitem');
-
-      var badgeHtml = isRec ? '<span class="badge-recommended">RECOMMENDED</span>' : '';
-
-      card.innerHTML =
-        '<div class="proposal-card-header">' +
-          '<div class="proposal-agent-info">' +
-            '<span class="proposal-agent-icon">' + meta.icon + '</span>' +
-            '<span class="proposal-agent-name">' + meta.name + '</span>' +
-          '</div>' +
-          '<div class="proposal-badge-group">' +
-            badgeHtml +
-            (scores ? '<span class="proposal-score-badge">' + total + ' pts</span>' : '') +
-          '</div>' +
-        '</div>' +
-        '<div class="proposal-card-actions">' +
-          '<button class="btn-icon" onclick="copyProposal(\'' + agentKey + '\')" title="複製">COPY</button>' +
-        '</div>' +
-        '<div class="proposal-card-body">' + esc(text) + '</div>';
-
-      container.appendChild(card);
+  function setDisabled(d){ta.disabled=d;btn.disabled=d;d?btn.classList.add('loading'):btn.classList.remove('loading')}
+  function showErr(m){clearErr();var d=document.createElement('div');d.className='error-message';d.textContent=m;ta.parentNode.insertBefore(d,ta.nextSibling)}
+  function clearErr(){var e=document.querySelector('.input-section .error-message');if(e)e.remove()}
+  // SSE
+  function connectSSE(sid){
+    if(es)es.close();
+    es=new EventSource('/debates/'+sid+'/stream');
+    es.addEventListener('round_start',function(e){
+      var d=JSON.parse(e.data);
+      // Mark preceding rounds done
+      for(var i=1;i<d.current_round;i++)setPipeState('r'+i,'done');
+      setPipeState('r'+d.current_round,'active');
     });
-
-    document.getElementById('proposals-section').style.display = 'block';
+    es.addEventListener('round_complete',function(e){
+      var d=JSON.parse(e.data);
+      setPipeState('r'+d.current_round,'done');
+    });
+    es.addEventListener('synthesis_start',function(){setPipeState('syn','active')});
+    es.addEventListener('scoring_start',function(){setPipeState('syn','done');setPipeState('score','active')});
+    es.addEventListener('debate_complete',function(){
+      setPipeState('score','done');
+      btn.classList.remove('loading');
+      closeSSE();
+      fetchFinal(sid);
+    });
+    es.addEventListener('error',function(e){
+      if(e.data){var d=JSON.parse(e.data);showErr(d.error_message||'錯誤')}
+      btn.classList.remove('loading');closeSSE();
+    });
+    es.onerror=function(){connBanner.style.display='flex';closeSSE()};
   }
-  /* Scoring */
-  function renderScoring(state) {
-    if (!state || !state.scores) return;
-    var scores = state.scores;
+  function closeSSE(){if(es){es.close();es=null}}
+
+  window.reconnect=function(){
+    connBanner.style.display='none';
+    if(sessionId)fetch('/debates/'+sessionId).then(function(r){return r.json()}).then(function(s){
+      if(s.current_phase!=='completed'&&s.current_phase!=='failed')connectSSE(sessionId);
+    }).catch(function(){});
+  };
+
+  function fetchFinal(sid){
+    fetch('/debates/'+sid).then(function(r){return r.json()}).then(function(s){
+      window.__dr=s;
+      showInput(s.user_input);
+      renderHistory(s);
+      renderProposals(s);
+      renderScoring(s);
+    }).catch(function(){});
+  }
+
+  // Start
+  window.startDebate=function(){
+    clearErr();
+    var input=ta.value.trim();
+    if(!input){showErr('請輸入您的想法');ta.focus();return}
+    // Read current settings
+    saveSettings();
+    setDisabled(true);
+    var body={user_input:input,config:{
+      rounds:userConfig.rounds,
+      prompt_a:userConfig.prompt_a,prompt_b:userConfig.prompt_b,
+      prompt_c:userConfig.prompt_c,prompt_d:userConfig.prompt_d
+    }};
+    fetch('/debates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(function(r){if(!r.ok)return r.json().then(function(b){throw new Error(b.detail||'失敗')});return r.json()})
+    .then(function(d){
+      sessionId=d.session_id;
+      buildPipeline(userConfig.rounds);
+      pipeSec.style.display='block';
+      pipeSec.scrollIntoView({behavior:'smooth'});
+      connectSSE(sessionId);
+    }).catch(function(e){setDisabled(false);showErr(e.message)});
+  };
+
+  // Utilities
+  function esc(s){if(!s)return '';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+  window.copyEl=function(id){
+    var el=document.getElementById(id);
+    if(!el)return;
+    navigator.clipboard.writeText(el.textContent).catch(function(){});
+  };
+
+  function copyText(txt){
+    navigator.clipboard.writeText(txt||'').catch(function(){});
+  }
+  window.copyText=copyText;
+
+  window.copyProposal=function(agent){
+    var s=window.__dr;if(!s)return;
+    if(agent==='a')copyText(s.a_responses[s.a_responses.length-1]||'');
+    else if(agent==='b')copyText(s.b_responses[s.b_responses.length-1]||'');
+    else if(agent==='c')copyText(s.c1||'');
+  };
+
+  // Show input
+  function showInput(text){
+    var sec=document.getElementById('input-display');
+    document.getElementById('input-text').textContent=text||'';
+    sec.style.display='block';
+  }
+
+  // Toggle history collapse
+  window.toggleHistory=function(){
+    var body=document.getElementById('history-body');
+    var chev=document.getElementById('history-chevron');
+    body.classList.toggle('collapsed');
+    chev.classList.toggle('open');
+  };
+
+  // Render round history
+  function renderHistory(state){
+    var sec=document.getElementById('history-section');
+    var tabs=document.getElementById('round-tabs');
+    var content=document.getElementById('round-content');
+    var total=Math.max(state.a_responses.length,state.b_responses.length);
+    if(total===0){sec.style.display='none';return}
+    sec.style.display='block';
+    tabs.innerHTML='';content.innerHTML='';
+
+    for(var i=0;i<total;i++){
+      var t=document.createElement('button');
+      t.className='round-tab'+(i===total-1?' active':'');
+      t.textContent='ROUND '+(i+1);
+      t.dataset.round=i;
+      t.onclick=function(){
+        tabs.querySelectorAll('.round-tab').forEach(function(b){b.classList.remove('active')});
+        this.classList.add('active');
+        showRound(parseInt(this.dataset.round),state);
+      };
+      tabs.appendChild(t);
+    }
+    showRound(total-1,state);
+  }
+
+  function showRound(idx,state){
+    var content=document.getElementById('round-content');
+    content.innerHTML='';
+    var pa=document.createElement('div');pa.className='round-panel';pa.dataset.agent='a';
+    pa.innerHTML='<div class="round-panel-header"><span>A</span> Agent A — Round '+(idx+1)+'<span style="margin-left:auto"><button class="btn-s" onclick="copyText(this.closest(\'.round-panel\').querySelector(\'.round-panel-body\').textContent)">COPY</button></span></div><div class="round-panel-body">'+(esc(state.a_responses[idx])||'—')+'</div>';
+    var pb=document.createElement('div');pb.className='round-panel';pb.dataset.agent='b';
+    pb.innerHTML='<div class="round-panel-header"><span>B</span> Agent B — Round '+(idx+1)+'<span style="margin-left:auto"><button class="btn-s" onclick="copyText(this.closest(\'.round-panel\').querySelector(\'.round-panel-body\').textContent)">COPY</button></span></div><div class="round-panel-body">'+(esc(state.b_responses[idx])||'—')+'</div>';
+    content.appendChild(pa);content.appendChild(pb);
+  }
+
+  // Render proposals
+  function renderProposals(state){
+    var sec=document.getElementById('proposals-section');
+    var grid=document.getElementById('proposals');
+    var aFinal=state.a_responses.length?state.a_responses[state.a_responses.length-1]:'';
+    var bFinal=state.b_responses.length?state.b_responses[state.b_responses.length-1]:'';
+    var c1=state.c1||'';
+    var sc=state.scores;
+    var rec=sc?sc.recommended:'';
+
+    grid.innerHTML='';grid.className='pgrid'+(singleCol?' single':'');
+
+    var items=[
+      {agent:'a',label:'Agent A',sub:'創新方案',text:aFinal,key:'a_score',recKey:'a_final'},
+      {agent:'b',label:'Agent B',sub:'保守方案',text:bFinal,key:'b_score',recKey:'b_final'},
+      {agent:'c',label:'Agent C',sub:'折衷方案',text:c1,key:'c1_score',recKey:'c1'}
+    ];
+
+    items.forEach(function(it){
+      var card=document.createElement('div');card.className='pcard'+(rec===it.recKey?' rec':'');card.dataset.a=it.agent;
+      var overall=sc&&sc[it.key]?sc[it.key].overall_recommendation.score:'—';
+      var isRec=rec===it.recKey;
+      card.innerHTML='<div class="pcard-hd"><div class="pcard-info"><div class="pcard-icon">'+it.agent.toUpperCase()+'</div><div><div class="pcard-name">'+it.label+'</div></div></div><div class="pcard-badges"><span class="badge-score">'+overall+'/10</span>'+(isRec?'<span class="badge-rec">RECOMMENDED</span>':'')+'</div></div><div class="pcard-body">'+esc(it.text)+'</div><div class="pcard-acts"><button class="btn-s" onclick="copyProposal(\''+it.agent+'\')">COPY</button></div>';
+      grid.appendChild(card);
+    });
+    sec.style.display='block';
+  }
+
+  // Render scoring
+  var radarChart=null;
+  function renderScoring(state){
+    var sec=document.getElementById('scoring-section');
+    var sc=state.scores;
+    if(!sc){sec.style.display='none';return}
+    sec.style.display='block';
 
     // Rationale
-    if (scores.rationale) {
-      var box = document.getElementById('rationale-box');
-      box.innerHTML = '<div class="rationale-label">EVALUATION RATIONALE</div>' + esc(scores.rationale);
-      box.style.display = 'block';
-    }
+    var rb=document.getElementById('rationale-box');
+    if(sc.rationale){
+      rb.innerHTML='<div class="rationale-label">EVALUATION RATIONALE</div>'+esc(sc.rationale);
+      rb.style.display='block';
+    }else{rb.style.display='none'}
 
-    renderRadarChart(scores);
-    renderScoreTable(scores);
-    document.getElementById('scoring-section').style.display = 'block';
-  }
+    // Radar chart
+    var dims=['feasibility','innovation','risk_control','cost_effectiveness','overall_recommendation'];
+    var labels=['可行性','創新性','風險控制','成本效益','綜合推薦'];
+    var aData=dims.map(function(d){return sc.a_score[d].score});
+    var bData=dims.map(function(d){return sc.b_score[d].score});
+    var cData=dims.map(function(d){return sc.c1_score[d].score});
 
-  function renderRadarChart(scores) {
-    var labels = DIMENSIONS.map(function (d) { return d.label; });
-    function getData(sk) {
-      var ps = scores[sk];
-      if (!ps) return labels.map(function () { return 0; });
-      return DIMENSIONS.map(function (d) { return ps[d.key] ? ps[d.key].score : 0; });
-    }
-    var ctx = document.getElementById('radar-chart').getContext('2d');
-    if (radarChartInstance) radarChartInstance.destroy();
-
-    radarChartInstance = new Chart(ctx, {
-      type: 'radar',
-      data: {
-        labels: labels,
-        datasets: [
-          { label: '創新方案 (A)', data: getData('a3_score'), borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.1)', pointBackgroundColor: '#10B981', borderWidth: 2, pointRadius: 3 },
-          { label: '保守方案 (B)', data: getData('b3_score'), borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.1)', pointBackgroundColor: '#F59E0B', borderWidth: 2, pointRadius: 3 },
-          { label: '折衷方案 (C)', data: getData('c1_score'), borderColor: '#8B5CF6', backgroundColor: 'rgba(139,92,246,0.1)', pointBackgroundColor: '#8B5CF6', borderWidth: 2, pointRadius: 3 }
+    var ctx=document.getElementById('radar-chart').getContext('2d');
+    if(radarChart)radarChart.destroy();
+    radarChart=new Chart(ctx,{
+      type:'radar',
+      data:{
+        labels:labels,
+        datasets:[
+          {label:'Agent A',data:aData,borderColor:'#10B981',backgroundColor:'rgba(16,185,129,.12)',pointBackgroundColor:'#10B981',borderWidth:2},
+          {label:'Agent B',data:bData,borderColor:'#F59E0B',backgroundColor:'rgba(245,158,11,.12)',pointBackgroundColor:'#F59E0B',borderWidth:2},
+          {label:'Agent C',data:cData,borderColor:'#8B5CF6',backgroundColor:'rgba(139,92,246,.12)',pointBackgroundColor:'#8B5CF6',borderWidth:2}
         ]
       },
-      options: {
-        responsive: true, maintainAspectRatio: true,
-        scales: {
-          r: {
-            min: 0, max: 10,
-            ticks: { stepSize: 2, color: '#505A6E', backdropColor: 'transparent', font: { size: 10 } },
-            grid: { color: 'rgba(30,42,58,0.8)' },
-            angleLines: { color: 'rgba(30,42,58,0.8)' },
-            pointLabels: { color: '#8B95A8', font: { size: 11 } }
-          }
-        },
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: { color: '#8B95A8', padding: 16, usePointStyle: true, pointStyle: 'circle', font: { size: 11 } }
-          }
-        }
+      options:{
+        responsive:true,maintainAspectRatio:true,
+        scales:{r:{min:0,max:10,ticks:{stepSize:2,color:'#505A6E',backdropColor:'transparent',font:{size:10}},grid:{color:'rgba(30,42,58,.6)'},angleLines:{color:'rgba(30,42,58,.6)'},pointLabels:{color:'#8B95A8',font:{size:11}}}},
+        plugins:{legend:{labels:{color:'#8B95A8',font:{size:11},usePointStyle:true,pointStyle:'circle'}}}
       }
+    });
+
+    // Score table
+    var thead=document.querySelector('#score-table thead');
+    var tbody=document.querySelector('#score-table tbody');
+    thead.innerHTML='<tr><th>維度</th><th class="th-a">Agent A</th><th class="th-b">Agent B</th><th class="th-c">Agent C</th></tr>';
+    tbody.innerHTML='';
+    dims.forEach(function(d,i){
+      var a=sc.a_score[d],b=sc.b_score[d],c=sc.c1_score[d];
+      var vals=[a.score,b.score,c.score];
+      var mx=Math.max.apply(null,vals),mn=Math.min.apply(null,vals);
+      function cls(v){return v===mx?'hi':v===mn?'lo':''}
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td>'+labels[i]+'</td><td><div class="scell"><span class="sval '+cls(a.score)+'">'+a.score+'</span><span class="scmt">'+esc(a.comment)+'</span></div></td><td><div class="scell"><span class="sval '+cls(b.score)+'">'+b.score+'</span><span class="scmt">'+esc(b.comment)+'</span></div></td><td><div class="scell"><span class="sval '+cls(c.score)+'">'+c.score+'</span><span class="scmt">'+esc(c.comment)+'</span></div></td>';
+      tbody.appendChild(tr);
     });
   }
 
-  function renderScoreTable(scores) {
-    var table = document.getElementById('score-table');
-    var thead = table.querySelector('thead');
-    var tbody = table.querySelector('tbody');
-    var hlA = getHighLow(scores.a3_score);
-    var hlB = getHighLow(scores.b3_score);
-    var hlC = getHighLow(scores.c1_score);
+  // Toggle view
+  window.toggleView=function(){
+    singleCol=!singleCol;
+    var grid=document.getElementById('proposals');
+    grid.className='pgrid'+(singleCol?' single':'');
+  };
 
-    thead.innerHTML = '<tr><th>DIMENSION</th><th class="th-agent-a">A</th><th class="th-agent-b">B</th><th class="th-agent-c">C</th></tr>';
-    tbody.innerHTML = '';
+  // Export
+  window.exportAll=function(fmt){
+    var s=window.__dr;if(!s)return;
+    var aFinal=s.a_responses.length?s.a_responses[s.a_responses.length-1]:'';
+    var bFinal=s.b_responses.length?s.b_responses[s.b_responses.length-1]:'';
+    var sc=s.scores;
 
-    DIMENSIONS.forEach(function (dim) {
-      var tr = document.createElement('tr');
-      function cell(ps, hl) {
-        if (!ps || !ps[dim.key]) return '<td>-</td>';
-        var ds = ps[dim.key];
-        var cls = '';
-        if (hl.high.indexOf(dim.key) !== -1) cls = ' score-high';
-        else if (hl.low.indexOf(dim.key) !== -1) cls = ' score-low';
-        return '<td><div class="score-cell"><span class="score-value' + cls + '">' + ds.score + '</span><span class="score-comment">' + esc(ds.comment) + '</span></div></td>';
+    if(fmt==='txt'){
+      var lines=[];
+      lines.push('=== 多智能體辯論結果 ===\n');
+      lines.push('原始輸入：\n'+s.user_input+'\n');
+      for(var i=0;i<s.a_responses.length;i++){
+        lines.push('--- Round '+(i+1)+' ---');
+        lines.push('Agent A：\n'+s.a_responses[i]+'\n');
+        lines.push('Agent B：\n'+s.b_responses[i]+'\n');
       }
-      tr.innerHTML = '<th>' + dim.label + '</th>' + cell(scores.a3_score, hlA) + cell(scores.b3_score, hlB) + cell(scores.c1_score, hlC);
-      tbody.appendChild(tr);
-    });
+      lines.push('--- 最終方案 ---');
+      lines.push('Agent A 最終方案：\n'+aFinal+'\n');
+      lines.push('Agent B 最終方案：\n'+bFinal+'\n');
+      lines.push('Agent C 折衷方案：\n'+(s.c1||'')+'\n');
+      if(sc){
+        lines.push('--- 評分 ---');
+        lines.push('推薦方案：'+sc.recommended);
+        if(sc.rationale)lines.push('評分理由：'+sc.rationale);
+        var dims=['feasibility','innovation','risk_control','cost_effectiveness','overall_recommendation'];
+        var dlabels=['可行性','創新性','風險控制','成本效益','綜合推薦'];
+        dims.forEach(function(d,j){
+          lines.push(dlabels[j]+'：A='+sc.a_score[d].score+' B='+sc.b_score[d].score+' C='+sc.c1_score[d].score);
+        });
+      }
+      var blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});
+      dl(blob,'debate-result.txt');
+    }else{
+      var h='<!DOCTYPE html><html><head><meta charset="utf-8"><title>辯論結果</title><style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.8;color:#222}h1{font-size:1.4rem}h2{font-size:1.1rem;margin-top:1.5rem;border-bottom:1px solid #ddd;padding-bottom:.3rem}h3{font-size:1rem;margin-top:1rem}pre{white-space:pre-wrap;background:#f5f5f5;padding:1rem;border-radius:6px;font-size:.9rem}.rec{color:#059669;font-weight:bold}</style></head><body>';
+      h+='<h1>多智能體辯論結果</h1>';
+      h+='<h2>原始輸入</h2><pre>'+esc(s.user_input)+'</pre>';
+      for(var i=0;i<s.a_responses.length;i++){
+        h+='<h2>Round '+(i+1)+'</h2>';
+        h+='<h3>Agent A</h3><pre>'+esc(s.a_responses[i])+'</pre>';
+        h+='<h3>Agent B</h3><pre>'+esc(s.b_responses[i])+'</pre>';
+      }
+      h+='<h2>最終方案</h2>';
+      h+='<h3>Agent A 最終方案</h3><pre>'+esc(aFinal)+'</pre>';
+      h+='<h3>Agent B 最終方案</h3><pre>'+esc(bFinal)+'</pre>';
+      h+='<h3>Agent C 折衷方案</h3><pre>'+esc(s.c1||'')+'</pre>';
+      if(sc){
+        h+='<h2>評分結果</h2>';
+        h+='<p class="rec">推薦方案：'+esc(sc.recommended)+'</p>';
+        if(sc.rationale)h+='<p>'+esc(sc.rationale)+'</p>';
+      }
+      h+='</body></html>';
+      var blob=new Blob([h],{type:'text/html;charset=utf-8'});
+      dl(blob,'debate-result.html');
+    }
+  };
+
+  function dl(blob,name){
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);
   }
 
 })();

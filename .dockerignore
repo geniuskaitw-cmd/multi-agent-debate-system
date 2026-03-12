@@ -1,0 +1,12 @@
+.env
+.git
+.gitignore
+.kiro
+.pytest_cache
+.vscode
+__pycache__
+tests
+*.md
+Dockerfile
+docker-compose.yml
+.dockerignore

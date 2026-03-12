@@ -193,14 +193,14 @@ def get_agent_c_prompt() -> str:
 # --- Agent D：獨立評審 ---
 
 _SCORECARD_JSON_SCHEMA = """{
-  "a3_score": {
+  "a_score": {
     "feasibility": {"score": <1-10整數>, "comment": "<簡短評語>"},
     "innovation": {"score": <1-10整數>, "comment": "<簡短評語>"},
     "risk_control": {"score": <1-10整數>, "comment": "<簡短評語>"},
     "cost_effectiveness": {"score": <1-10整數>, "comment": "<簡短評語>"},
     "overall_recommendation": {"score": <1-10整數>, "comment": "<簡短評語>"}
   },
-  "b3_score": {
+  "b_score": {
     "feasibility": {"score": <1-10整數>, "comment": "<簡短評語>"},
     "innovation": {"score": <1-10整數>, "comment": "<簡短評語>"},
     "risk_control": {"score": <1-10整數>, "comment": "<簡短評語>"},
@@ -214,8 +214,8 @@ _SCORECARD_JSON_SCHEMA = """{
     "cost_effectiveness": {"score": <1-10整數>, "comment": "<簡短評語>"},
     "overall_recommendation": {"score": <1-10整數>, "comment": "<簡短評語>"}
   },
-  "recommended": "<a3|b3|c1>",
-  "rationale": "<200字以內的繁體中文綜合評分理由，說明為何推薦該方案，以及三個方案各自的核心優劣勢>"
+  "recommended": "<a_final|b_final|c1>",
+  "rationale": "<500字以上的繁體中文綜合評分分析報告，必須包含：1.三份方案的核心差異比較 2.各維度評分的具體依據與推理過程 3.推薦方案的關鍵優勢 4.其他方案的主要不足 5.最終推薦結論>"
 }"""
 
 
@@ -240,11 +240,10 @@ def get_agent_d_prompt() -> str:
 - recommended 欄位必須設定為 overall_recommendation 分數最高的方案
 - 絕對不要在回覆中提及你的角色名稱、代號或身分，只需專注於評分內容本身
 
-## 當前任務：獨立評分（Phase 5）
-你將收到原始問題以及三份最終方案：
-- **A3**：創新驅動者的最終修正方案
-- **B3**：風險控制者的最終修正方案
-- **C1**：總結決策者的折衷方案
+## 當前任務：獨立評分
+你將收到原始問題以及三份方案（方案 A、方案 B、方案 C）。
+你不知道這些方案的作者是誰、他們的角色設定或立場傾向。
+你必須純粹根據方案內容本身的品質進行評分，不得對任何方案有預設偏好。
 
 請依據以下五個維度，對每份方案進行 1-10 分的量化評分：
 1. **可行性（feasibility）**：方案在現實條件下的可執行程度
@@ -261,6 +260,6 @@ def get_agent_d_prompt() -> str:
 ## 評分規則
 - 每個 score 必須為 1 到 10 的整數
 - 每個 comment 必須為簡短的繁體中文評語
-- recommended 欄位必須為 "a3"、"b3" 或 "c1" 其中之一
+- recommended 欄位必須為 "a_final"、"b_final" 或 "c1" 其中之一
 - recommended 必須對應 overall_recommendation 分數最高的方案
-- 若有多個方案的 overall_recommendation 分數相同，優先推薦 c1（折衷方案）"""
+- 若有多個方案的 overall_recommendation 分數相同，你必須根據各維度的細項分數進行二次比較，選出綜合表現最佳者，不得偏好任何特定方案"""
