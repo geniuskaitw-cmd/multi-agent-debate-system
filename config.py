@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     llm_timeout: int = 120
     llm_max_retries: int = 3
 
+    # SQLite 資料庫路徑
+    database_path: str = "/app/data/debates.db"
+
+    # JWT 認證設定
+    jwt_secret: str
+    jwt_expire_hours: int = 24
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 

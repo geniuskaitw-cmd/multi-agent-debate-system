@@ -108,3 +108,43 @@ class PhaseUpdate(BaseModel):
     total_rounds: int = 0
     data: Optional[dict] = None
     error_message: Optional[str] = None
+
+
+# --- 認證相關模型 ---
+
+class RegisterRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=32)
+    password: str = Field(min_length=6)
+
+
+class RegisterResponse(BaseModel):
+    username: str
+    message: str
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+# --- 分頁相關模型 ---
+
+class DebateListItem(BaseModel):
+    session_id: str
+    user_input: str  # 前 50 字
+    phase: str
+    created_at: str
+    updated_at: str
+
+
+class PaginatedDebateList(BaseModel):
+    items: list[DebateListItem]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
