@@ -4,6 +4,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from api import router
@@ -42,4 +43,11 @@ app = FastAPI(
 
 app.include_router(router)
 app.include_router(auth_router)
+
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/static/index.html")
+
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
